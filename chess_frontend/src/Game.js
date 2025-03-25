@@ -3,12 +3,20 @@ import { BehaviorSubject } from 'rxjs';
 
 const chess = new Chess();
 
+// Add history tracking
+const moveHistory = [];
+const redoStack = [];
+
+// Update the gameSubject initialization to include moveNotation
 export const gameSubject = new BehaviorSubject({
   board: chess.board(),
   pendingPromotion: null,
   isGameOver: false,
   turn: chess.turn(),
   result: null,
+  canUndo: false,
+  canRedo: false,
+  moveNotation: [] // Add this line
 });
 
 export function initGame() {
@@ -20,25 +28,42 @@ export function initGame() {
         if (!chess.board()) {
           throw new Error('Invalid board state after loading FEN');
         }
+        
+        // Initialize history from saved history if available
+        const savedHistory = localStorage.getItem('moveHistory');
+        if (savedHistory) {
+          moveHistory.length = 0;
+          moveHistory.push(...JSON.parse(savedHistory));
+        }
       } catch (error) {
         console.error('Failed to load saved game:', error);
         chess.reset();
         localStorage.removeItem('savedGame');
+        localStorage.removeItem('moveHistory');
+        moveHistory.length = 0;
+        redoStack.length = 0;
         console.log('Reset game due to invalid FEN:', chess.fen());
       }
     } else {
       chess.reset();
+      moveHistory.length = 0;
+      redoStack.length = 0;
       console.log('Started new game:', chess.fen());
     }
     updateGame();
-  }
+}
 
 export function resetGame() {
   chess.reset();
+  moveHistory.length = 0;
+  redoStack.length = 0;
   localStorage.removeItem('savedGame');
+  localStorage.removeItem('moveHistory');
   console.log('Game reset:', chess.fen());
   updateGame();
 }
+
+resetGame();
 
 export function handleMove(from, to) {
   console.log(`Handling move from ${from} to ${to}`);
@@ -67,6 +92,13 @@ export function move(from, to, promotion) {
     const legalMove = chess.move(moveObj);
     if (legalMove) {
       console.log('Move successful:', chess.fen());
+      // Save position before the move to history
+      moveHistory.push({
+        fen: legalMove.before,
+        move: legalMove
+      });
+      // Clear redo stack after a new move
+      redoStack.length = 0;
       updateGame();
     } else {
       console.error('Move failed:', moveObj);
@@ -76,17 +108,87 @@ export function move(from, to, promotion) {
   }
 }
 
+// Add undo function
+export function undo() {
+  if (moveHistory.length === 0) {
+    console.log('No moves to undo');
+    return;
+  }
+
+  const lastPosition = moveHistory.pop();
+  redoStack.push({
+    fen: chess.fen(),
+    move: chess.history({ verbose: true }).pop()
+  });
+  
+  // Load the previous position
+  chess.load(lastPosition.fen);
+  console.log('Move undone, new state:', chess.fen());
+  updateGame();
+}
+
+// Add redo function
+export function redo() {
+  if (redoStack.length === 0) {
+    console.log('No moves to redo');
+    return;
+  }
+
+  const nextPosition = redoStack.pop();
+  moveHistory.push({
+    fen: chess.fen(),
+    move: nextPosition.move
+  });
+  
+  // Replay the move that was undone
+  const { from, to, promotion } = nextPosition.move;
+  chess.move({ from, to, promotion });
+  console.log('Move redone, new state:', chess.fen());
+  updateGame();
+}
+
+// Update the updateGame function to include move notation
 function updateGame(pendingPromotion = null) {
   const isGameOver = chess.isGameOver();
+  
+  // Get standard notation history
+  const standardNotation = chess.history();
+  
+  // Get detailed move history with piece information
+  const detailedHistory = chess.history({ verbose: true });
+  
+  // Create enhanced notation with piece type
+  const enhancedNotation = standardNotation.map((move, index) => {
+    const detailedMove = detailedHistory[index];
+    if (!detailedMove) return move;
+    
+    // Map piece codes to readable names
+    const pieceNames = {
+      'p': 'Pawn',
+      'n': 'Knight',
+      'b': 'Bishop',
+      'r': 'Rook',
+      'q': 'Queen',
+      'k': 'King'
+    };
+    
+    const pieceName = pieceNames[detailedMove.piece] || 'Unknown';
+    return `${pieceName} ${move}`;
+  });
+  
   const newGame = {
     board: chess.board(),
     pendingPromotion,
     isGameOver,
     turn: chess.turn(),
     result: isGameOver ? getGameResult() : null,
+    canUndo: moveHistory.length > 0,
+    canRedo: redoStack.length > 0,
+    moveNotation: enhancedNotation
   };
 
   localStorage.setItem('savedGame', chess.fen());
+  localStorage.setItem('moveHistory', JSON.stringify(moveHistory));
   gameSubject.next(newGame);
 }
 
