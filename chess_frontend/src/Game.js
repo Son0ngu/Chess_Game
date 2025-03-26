@@ -122,7 +122,10 @@ export function undo() {
   });
   
   // Load the previous position
-  chess.load(lastPosition.fen);
+  chess.reset();
+  moveHistory.forEach(({ move }) => {
+    chess.move(move);
+  });
   console.log('Move undone, new state:', chess.fen());
   updateGame();
 }
