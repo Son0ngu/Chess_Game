@@ -150,7 +150,7 @@ export function redo() {
   updateGame();
 }
 
-// Update the updateGame function to include move notation
+// Update the updateGame function to properly display castling notation
 function updateGame(pendingPromotion = null) {
   const isGameOver = chess.isGameOver();
   
@@ -160,10 +160,17 @@ function updateGame(pendingPromotion = null) {
   // Get detailed move history with piece information
   const detailedHistory = chess.history({ verbose: true });
   
-  // Create enhanced notation with piece type
+  // Create enhanced notation with piece type and castling info
   const enhancedNotation = standardNotation.map((move, index) => {
     const detailedMove = detailedHistory[index];
     if (!detailedMove) return move;
+    
+    // Special handling for castling
+    if (move === 'O-O') {
+      return 'King Castles Kingside';
+    } else if (move === 'O-O-O') {
+      return 'King Castles Queenside';
+    }
     
     // Map piece codes to readable names
     const pieceNames = {
@@ -176,7 +183,22 @@ function updateGame(pendingPromotion = null) {
     };
     
     const pieceName = pieceNames[detailedMove.piece] || 'Unknown';
-    return `${pieceName} ${move}`;
+    
+    // Check if capture happened
+    let moveText = move;
+    if (detailedMove.captured) {
+      const capturedPiece = pieceNames[detailedMove.captured] || 'piece';
+      moveText += ` (captures ${capturedPiece})`;
+    }
+    
+    // Check if it's a check or checkmate
+    if (move.includes('+')) {
+      moveText = moveText.replace('+', '') + ' (check)';
+    } else if (move.includes('#')) {
+      moveText = moveText.replace('#', '') + ' (checkmate)';
+    }
+    
+    return `${pieceName} ${moveText}`;
   });
   
   const newGame = {
@@ -186,7 +208,7 @@ function updateGame(pendingPromotion = null) {
     turn: chess.turn(),
     result: isGameOver ? getGameResult() : null,
     canUndo: moveHistory.length > 0,
-    canRedo: redoStack.length > 0,
+    canRedo: redoStack.length > 0, 
     moveNotation: enhancedNotation
   };
 
