@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import './App.css';
-import { gameSubject, initGame, resetGame, undo, redo } from './Game';
-import Board from './Board';
-import MoveHistory from './MoveHistory';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import "./App.css";
+import { gameSubject, initGame, resetGame, undo, redo } from "./Game";
+import Board from "./Board";
+import MoveHistory from "./MoveHistory";
+import Signup from "./User/SignUp";
+import Signin from "./User/SignIn";
 
-function App() {
+function GamePage() {
   const [board, setBoard] = useState([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [result, setResult] = useState(null);
-  const [turn, setTurn] = useState('w');
+  const [turn, setTurn] = useState("w");
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [moveNotation, setMoveNotation] = useState([]);
@@ -16,36 +19,24 @@ function App() {
   useEffect(() => {
     initGame();
     const subscription = gameSubject.subscribe((game) => {
-      console.log('Game state updated:', game);
       setBoard(game.board || []);
       setIsGameOver(game.isGameOver || false);
       setResult(game.result || null);
-      setTurn(game.turn || 'w');
+      setTurn(game.turn || "w");
       setCanUndo(game.canUndo || false);
       setCanRedo(game.canRedo || false);
       setMoveNotation(game.moveNotation || []);
     });
-
-    const initialGame = gameSubject.getValue();
-    console.log('Initial game state:', initialGame);
-    if (initialGame && initialGame.board) {
-      setBoard(initialGame.board);
-      setIsGameOver(initialGame.isGameOver || false);
-      setResult(initialGame.result || null);
-      setTurn(initialGame.turn || 'w');
-      setCanUndo(initialGame.canUndo || false);
-      setCanRedo(initialGame.canRedo || false);
-      setMoveNotation(initialGame.moveNotation || []);
-    } else {
-      console.warn('Initial game state invalid, resetting...');
-      resetGame();
-    }
 
     return () => subscription.unsubscribe();
   }, []);
 
   return (
     <div className="container">
+      <nav>
+        <Link to="/signup">Sign Up</Link> | <Link to="/signin">Sign In</Link>
+      </nav>
+
       <div className="game-controls vertical-text">
         <button onClick={undo} disabled={!canUndo || isGameOver}>
           <span className="vertical-text">UNDO</span>
@@ -57,7 +48,7 @@ function App() {
           <span className="vertical-text">NEW GAME</span>
         </button>
       </div>
-      
+
       <div className="board-container">
         <Board board={board} turn={turn} />
         {isGameOver && (
@@ -67,10 +58,26 @@ function App() {
           </div>
         )}
       </div>
-      
+
       <MoveHistory moveNotation={moveNotation} />
     </div>
   );
 }
+
+const App = () => {
+  return (
+    <Router>
+      <nav>
+        <Link to="/">Home</Link> | <Link to="/signup">Sign Up</Link> | <Link to="/signin">Sign In</Link>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<GamePage />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/signin" element={<Signin />} />
+      </Routes>
+    </Router>
+  );
+};
 
 export default App;
