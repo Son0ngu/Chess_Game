@@ -1,6 +1,11 @@
+const connectDB = require('../config/database');
 const Game = require('../models/Game');
 const User = require('../models/user');
+const Room = require('../models/Room');
 const { Chess } = require('chess.js');
+
+// Ensure DB connection is established
+connectDB();
 
 // Create a new game
 const createGame = async (req, res) => {
@@ -143,6 +148,79 @@ const getUserGames = async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve games' });
   }
 };
+
+// Example functions to interact with your collections
+
+// Create a new game
+async function createGame(whitePlayerId, blackPlayerId = null) {
+  try {
+    const newGame = new Game({
+      playerWhite: whitePlayerId,
+      playerBlack: blackPlayerId,
+      status: blackPlayerId ? 'ongoing' : 'waiting'
+    });
+    
+    const savedGame = await newGame.save();
+    return savedGame;
+  } catch (error) {
+    console.error('Error creating game:', error);
+    throw error;
+  }
+}
+
+// Find games with populated player info
+async function getGameWithPlayers(gameId) {
+  try {
+    const game = await Game.findById(gameId)
+      .populate('playerWhite', 'username elo')
+      .populate('playerBlack', 'username elo');
+    return game;
+  } catch (error) {
+    console.error('Error fetching game:', error);
+    throw error;
+  }
+}
+
+// Add a move to a game
+async function addMove(gameId, moveData) {
+  try {
+    const game = await Game.findById(gameId);
+    game.moves.push(moveData);
+    game.fen = moveData.resultingFen || game.fen; // If you track resulting FEN
+    await game.save();
+    return game;
+  } catch (error) {
+    console.error('Error adding move:', error);
+    throw error;
+  }
+}
+
+// Create a room with a game
+async function createRoomWithGame(whitePlayerId) {
+  try {
+    // Create game first
+    const game = await createGame(whitePlayerId);
+    
+    // Generate unique room code
+    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Create room linked to game
+    const room = new Room({
+      roomCode,
+      playerWhite: whitePlayerId,
+      gameId: game._id
+    });
+    
+    const savedRoom = await room.save();
+    return {
+      room: savedRoom,
+      game
+    };
+  } catch (error) {
+    console.error('Error creating room with game:', error);
+    throw error;
+  }
+}
 
 module.exports = {
   createGame,

@@ -1,12 +1,12 @@
-  {
+{
   "dependencies": {
+    "@socket.io/cluster-adapter": "latest",
+    "@socket.io/mongo-adapter": "latest",
     "chess.js": "^1.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "mongoose": "^8.12.2",
-    "socket.io": "latest",
-    "@socket.io/mongo-adapter": "latest",
     "mongodb": "latest",
-    "@socket.io/cluster-adapter": "latest"
+    "mongoose": "^8.13.2",
+    "socket.io": "latest"
   }
 }

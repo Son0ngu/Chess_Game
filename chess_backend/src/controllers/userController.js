@@ -34,10 +34,13 @@ const registerUser = async (req, res) => {
 // Login user
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    // Find user
-    const user = await User.findOne({ email });
+    const { username, email, password } = req.body;
+    
+    // Find user by email or username
+    const user = await User.findOne(
+      email ? { email } : { username }
+    );
+    
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Compare password
@@ -49,7 +52,15 @@ const loginUser = async (req, res) => {
       expiresIn: '1d',
     });
 
-    res.json({ message: 'Login successful', token, userId: user._id });
+    res.json({ 
+      message: 'Login successful', 
+      token, 
+      user: {
+        id: user._id,
+        username: user.username,
+        elo: user.elo
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
