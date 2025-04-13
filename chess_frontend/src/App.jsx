@@ -4,8 +4,9 @@ import "./App.css";
 import { gameSubject, initGame, resetGame, undo, redo } from "./Game";
 import Board from "./Board";
 import MoveHistory from "./MoveHistory";
-import Signup from "./User/SignUp";
-import Signin from "./User/SignIn";
+import Signup from "./pages/SignUp";
+import Signin from "./pages/SignIn";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function GamePage() {
   const [board, setBoard] = useState([]);
@@ -33,10 +34,6 @@ function GamePage() {
 
   return (
     <div className="container">
-      <nav>
-        <Link to="/signup">Sign Up</Link> | <Link to="/signin">Sign In</Link>
-      </nav>
-
       <div className="game-controls vertical-text">
         <button onClick={undo} disabled={!canUndo || isGameOver}>
           <span className="vertical-text">UNDO</span>
@@ -64,6 +61,15 @@ function GamePage() {
   );
 }
 
+function Home() {
+  return (
+    <div className="home">
+      <h1>Welcome to the Chess Game</h1>
+      <Link to="/play">Start Playing</Link>
+    </div>
+  );
+}
+
 const App = () => {
   return (
     <Router>
@@ -72,9 +78,14 @@ const App = () => {
       </nav>
 
       <Routes>
-        <Route path="/" element={<GamePage />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Signin />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/play" element={
+          <ProtectedRoute>
+            <GamePage />
+          </ProtectedRoute>
+        } />
       </Routes>
     </Router>
   );

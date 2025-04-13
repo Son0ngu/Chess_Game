@@ -48,9 +48,3 @@ export const updateSocketAuth = () => {
 };
 
 export default socket;
-
-import socket, { updateSocketAuth } from '../socket/socket';
-
-// After successful login
-localStorage.setItem('token', response.data.data.token);
-updateSocketAuth(); // Update the socket connection with the new token
