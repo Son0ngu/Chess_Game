@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import "./App.css";
-import { gameSubject, initGame, resetGame, undo, redo } from "./Game";
-import Board from "./Board";
-import MoveHistory from "./MoveHistory";
+import { gameSubject, initGame, resetGame, undo, redo } from "./components/Game";
+import Board from "./components/Board";
+import MoveHistory from "./components/MoveHistory";
 import Signup from "./pages/SignUp";
 import Signin from "./pages/SignIn";
-import ProtectedRoute from "./components/ProtectedRoute";
 
 function GamePage() {
   const [board, setBoard] = useState([]);
@@ -81,11 +80,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Signin />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/play" element={
-          <ProtectedRoute>
-            <GamePage />
-          </ProtectedRoute>
-        } />
+        <Route path="/play" element={<GamePage />} />
       </Routes>
     </Router>
   );

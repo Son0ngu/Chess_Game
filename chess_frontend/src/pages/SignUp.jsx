@@ -92,7 +92,8 @@ const SignUp = () => {
         }, 2000);
       }
     } catch (error) {
-      // Handle error
+      console.error("Register error:", error);
+      console.error("Response data:", error.response?.data);
       const errorMessage = error.response?.data?.error || "Error creating account. Please try again.";
       setServerMessage({ 
         type: "error", 
