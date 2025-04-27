@@ -185,38 +185,63 @@ const setupGameSocket = (io) => {
     });
     
     // Request undo
-    socket.on('game:requestUndo', ({ gameId }) => {
-      // Broadcast undo request to opponent
-      socket.to(`game:${gameId}`).emit('game:undoRequested', {
-        requestedBy: socket.user.id
-      });
+    socket.on('game:requestUndo', async ({ gameId }) => {
+      try {
+        const userId = socket.user.id;
+        const result = await GameService.requestUndo(gameId, userId);
+        
+        // Gửi yêu cầu undo tới đối thủ (sử dụng định dạng room đúng)
+        socket.to(`game:${gameId}`).emit('game:undoRequest', {
+          gameId,
+          requesterId: userId
+        });
+        
+        logger.info(`${socket.user.username} requested undo in game ${gameId}`);
+      } catch (error) {
+        logger.error(`Undo request error: ${error.message}`);
+        socket.emit('game:error', { message: error.message });
+      }
     });
-    
-    // Respond to undo request
-    socket.on('game:respondUndo', async ({ gameId, accepted }) => {
-      if (accepted) {
-        try {
-          // Implement undo logic in GameService
-          // This would revert the last move and update game state
-          
-          // Broadcast game update after undo
-          const game = await GameService.getGame(gameId);
-          
-          io.to(`game:${gameId}`).emit('game:update', {
-            board: getBoardFromFEN(game.chess.fen()),
-            position: game.chess.fen(),
-            currentTurn: game.chess.turn() === 'w' ? 'white' : 'black',
-            moves: getMoveHistory(game.chess),
-            legalMoves: GameService.getLegalMovesMap(game.chess),
-            inCheck: game.chess.inCheck()
-          });
-        } catch (error) {
-          logger.error(`Undo error: ${error.message}`);
-          socket.emit('game:error', { message: 'Failed to undo move' });
-        }
-      } else {
-        // Notify requester that undo was declined
-        socket.to(`game:${gameId}`).emit('game:undoRejected');
+
+    // Accept undo
+    socket.on('game:acceptUndo', async ({ gameId }) => {
+      try {
+        const userId = socket.user.id;
+        const result = await GameService.acceptUndo(gameId, userId);
+        
+        // Gửi trạng thái mới đến cả hai người chơi
+        io.to(`game:${gameId}`).emit('game:update', {
+          board: getBoardFromFEN(result.fen),
+          position: result.fen,
+          currentTurn: result.currentTurn,
+          legalMoves: result.legalMoves,
+          inCheck: result.inCheck,
+          history: result.history
+        });
+        
+        // Thông báo cho người yêu cầu rằng undo được chấp nhận
+        socket.to(`game:${gameId}`).emit('game:undoResponse', { accepted: true });
+        
+        logger.info(`${socket.user.username} accepted undo in game ${gameId}`);
+      } catch (error) {
+        logger.error(`Accept undo error: ${error.message}`);
+        socket.emit('game:error', { message: error.message });
+      }
+    });
+
+    // Decline undo
+    socket.on('game:declineUndo', async ({ gameId }) => {
+      try {
+        const userId = socket.user.id;
+        const result = await GameService.declineUndo(gameId, userId);
+        
+        // Thông báo cho người yêu cầu rằng undo bị từ chối
+        socket.to(`game:${gameId}`).emit('game:undoResponse', { accepted: false });
+        
+        logger.info(`${socket.user.username} declined undo in game ${gameId}`);
+      } catch (error) {
+        logger.error(`Decline undo error: ${error.message}`);
+        socket.emit('game:error', { message: error.message });
       }
     });
     

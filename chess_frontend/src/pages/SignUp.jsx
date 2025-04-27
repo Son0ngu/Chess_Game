@@ -101,13 +101,16 @@ const SignUp = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-form-container">
-        <h2>Create an Account</h2>
+    <div className="signup-container">
+      <div className="signup-card">
+        <div className="signup-header">
+          <h2 className="signup-title">Create an Account</h2>
+          <p className="signup-subtitle">Join us to play chess online</p>
+        </div>
         
         {serverMessage.text && (
           <div 
-            className={`message ${serverMessage.type}`}
+            className={`auth-error`}
             role="alert"
             aria-live="assertive"
           >
@@ -115,13 +118,14 @@ const SignUp = () => {
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="auth-form" noValidate>
+        <form onSubmit={handleSubmit} className="signup-form" noValidate>
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
               type="text"
               id="username"
               name="username"
+              className="form-control"
               value={formData.username}
               onChange={handleChange}
               disabled={isLoading}
@@ -130,7 +134,7 @@ const SignUp = () => {
               autoComplete="username"
             />
             {errors.username && (
-              <span className="error" id="username-error">
+              <span className="form-error" id="username-error">
                 {errors.username}
               </span>
             )}
@@ -142,6 +146,7 @@ const SignUp = () => {
               type="email"
               id="email"
               name="email"
+              className="form-control"
               value={formData.email}
               onChange={handleChange}
               disabled={isLoading}
@@ -150,7 +155,7 @@ const SignUp = () => {
               autoComplete="email"
             />
             {errors.email && (
-              <span className="error" id="email-error">
+              <span className="form-error" id="email-error">
                 {errors.email}
               </span>
             )}
@@ -162,6 +167,7 @@ const SignUp = () => {
               type="password"
               id="password"
               name="password"
+              className="form-control"
               value={formData.password}
               onChange={handleChange}
               disabled={isLoading}
@@ -170,7 +176,7 @@ const SignUp = () => {
               autoComplete="new-password"
             />
             {errors.password && (
-              <span className="error" id="password-error">
+              <span className="form-error" id="password-error">
                 {errors.password}
               </span>
             )}
@@ -182,6 +188,7 @@ const SignUp = () => {
               type="password"
               id="confirmPassword"
               name="confirmPassword"
+              className="form-control"
               value={formData.confirmPassword}
               onChange={handleChange}
               disabled={isLoading}
@@ -190,7 +197,7 @@ const SignUp = () => {
               autoComplete="new-password"
             />
             {errors.confirmPassword && (
-              <span className="error" id="confirm-password-error">
+              <span className="form-error" id="confirm-password-error">
                 {errors.confirmPassword}
               </span>
             )}
@@ -198,22 +205,19 @@ const SignUp = () => {
           
           <button 
             type="submit" 
-            className="auth-button" 
+            className="signup-button" 
             disabled={isLoading}
           >
             {isLoading ? "Creating Account..." : "Sign Up"}
           </button>
         </form>
         
-        <p className="auth-redirect">
+        <div className="signup-options">
           Already have an account?{" "}
-          <Link 
-            to="/signin" 
-            className="auth-link"
-          >
+          <Link to="/signin">
             Sign In
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

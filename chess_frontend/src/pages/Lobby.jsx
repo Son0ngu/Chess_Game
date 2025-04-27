@@ -7,7 +7,7 @@ import { socket } from "../services/socket";
 
 const Lobby = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth(); // Lấy thêm user từ AuthContext
   const [isLoading] = useState(false);
   const [matchmaking, setMatchmaking] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
@@ -91,11 +91,18 @@ const Lobby = () => {
   return (
     <div className="lobby-container">
       <div className="lobby-header">
-        <h1>Game Lobby</h1>
-        <div className="lobby-stats">
-          <div className="stat-box">
-            <span className="stat-label">Online Players</span>
-            <span className="stat-value">{onlineUsers}</span>
+        <div className="header-title-box">
+          <h1>Game Lobby</h1>
+        </div>
+        
+        <div className="header-user-info">
+          <div className="user-box">
+            <span className="user-name">{user?.username || "User"}</span>
+          </div>
+          
+          <div className="online-count">
+            <div className="dot"></div>
+            <span>Online: {onlineUsers}</span>
           </div>
         </div>
       </div>

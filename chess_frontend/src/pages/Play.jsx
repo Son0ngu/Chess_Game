@@ -197,16 +197,20 @@ const Play = () => {
       </div>
 
       <div className="game-sidebar">
-        <MoveHistory moves={moves} />
+        <div className="move-history-container">
+          <MoveHistory moves={moves} />
+        </div>
         
-        <GameControls
-          onUndoRequest={() => socket.emit("game:requestUndo", { gameId })}
-          onNewGame={() => navigate("/lobby")}
-          canResign={!gameOver}
-          canOfferDraw={!gameOver}
-          onResign={() => setShowResignDialog(true)}
-          onOfferDraw={() => setShowDrawOfferDialog(true)}
-        />
+        <div className="game-controls-container">
+          <GameControls
+            onUndoRequest={() => socket.emit("game:requestUndo", { gameId })}
+            onNewGame={() => navigate("/lobby")}
+            canResign={!gameOver}
+            canOfferDraw={!gameOver}
+            onResign={() => setShowResignDialog(true)}
+            onOfferDraw={() => setShowDrawOfferDialog(true)}
+          />
+        </div>
 
         {/* Player info */}
         <div className="player-info">

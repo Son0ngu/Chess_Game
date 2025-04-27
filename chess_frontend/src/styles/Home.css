@@ -1,7 +1,48 @@
+:root {
+  /* Update color variables with purple theme */
+  --bg-primary: #1a0933;    /* Dark purple background */
+  --bg-secondary: #2d1046;  /* Slightly lighter purple */
+  --bg-tertiary: #3c1659;   /* Even lighter purple */
+  --accent-color: #9370DB;  /* Medium purple accent */
+  --accent-hover: #7d5ec2;  /* Darker purple for hover states */
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-tertiary: #ccb8e6;  /* Light purple for tertiary text */
+  --border-color: #4e2870;   /* Border color matching theme */
+}
+
+html {
+  background-color: var(--bg-primary);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  font-family: 'Inter', 'Roboto', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(rgba(147, 112, 219, 0.1) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .home-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 20px;
+  background-color: var(--bg-primary);
+  min-height: calc(100vh - 80px); /* Account for padding */
 }
 
 .hero-section {
@@ -10,10 +51,13 @@
   justify-content: space-between;
   gap: 40px;
   margin-bottom: 60px;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, #341450 100%);
+  border-radius: 12px;
 }
 
 .hero-content {
   flex: 1;
+  padding-left: 30px;
 }
 
 .hero-title {
@@ -21,6 +65,7 @@
   color: #333;
   margin-bottom: 20px;
   line-height: 1.2;
+  color: var(--text-primary);
 }
 
 .hero-subtitle {
@@ -28,6 +73,7 @@
   color: #555;
   margin-bottom: 30px;
   line-height: 1.6;
+  color: var(--text-primary);
 }
 
 .hero-buttons {
@@ -56,7 +102,7 @@
 }
 
 .secondary-btn {
-  background-color: white;
+  background-color: rgb(31, 30, 32);
   color: #3f51b5;
   border: 2px solid #3f51b5;
 }
@@ -75,6 +121,7 @@
 
 .features-section {
   padding: 40px 0;
+  background-color: var(--bg-primary);
 }
 
 .section-title {
@@ -82,6 +129,8 @@
   color: #333;
   text-align: center;
   margin-bottom: 40px;
+  background-color: transparent;
+  color: var(--text-primary);
 }
 
 .features-grid {
@@ -91,7 +140,7 @@
 }
 
 .feature-card {
-  background-color: white;
+  background-color: rgb(53, 46, 53);
   border-radius: 8px;
   padding: 30px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -100,6 +149,7 @@
 
 .feature-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(147, 112, 219, 0.2);
 }
 
 .feature-icon {
@@ -112,11 +162,13 @@
   font-size: 1.3rem;
   color: #333;
   margin-bottom: 15px;
+  color: var(--text-primary);
 }
 
 .feature-description {
   color: #555;
   line-height: 1.6;
+  color: var(--text-primary);
 }
 
 .stats-section {
@@ -152,12 +204,14 @@
 .cta-section {
   text-align: center;
   padding: 60px 0;
+  border-left: 5px solid var(--accent-color);
 }
 
 .cta-title {
   font-size: 2.2rem;
   color: #333;
   margin-bottom: 20px;
+  color: var(--text-primary);
 }
 
 .cta-description {
@@ -167,6 +221,7 @@
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+  color: var(--text-primary);
 }
 
 .cta-btn {
@@ -185,6 +240,164 @@
   background-color: #303f9f;
 }
 
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.cta-btn.secondary {
+  background-color: transparent;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+}
+
+.cta-btn.secondary:hover {
+  background-color: rgba(114, 137, 218, 0.1);
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  margin-bottom: 40px;
+
+  /* Mở rộng full-width và cho phép bo tròn */
+  width: 100%;
+  box-sizing: border-box;    /* đảm bảo padding được tính trong width */
+  background-color: #1f1d1f;    /* bạn có thể đổi màu nền tuỳ ý */
+  border-radius: 12px;       /* bo tròn 12px */
+  padding: 20px;             /* chuyển về padding đều hai chiều nếu muốn */
+  /* Tuỳ chọn: thêm shadow cho nổi bật */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.sign-in, .sign-up {
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.sign-in {
+  color: var(--text-primary);
+  background-color: transparent;
+  border: 1px solid var(--text-tertiary);
+}
+
+.sign-up {
+  color: white;
+  background-color: var(--accent-color);
+  border: none;
+}
+
+.sign-in:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sign-up:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Steps section styling */
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background-color: var(--accent-color);
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.step-card {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.steps-section {
+  background-color: var(--bg-primary);
+}
+
+/* Signin callout styling */
+.signin-callout {
+  background-color: var(--bg-primary);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 40px 0;
+}
+
+.signin-callout p {
+  color: var(--text-primary); /* This makes the text white */
+}
+
+.signin-callout a {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.signin-callout a:hover {
+  text-decoration: underline;
+}
+
+/* Footer styling */
+.home-footer {
+  border-top: 1px solid var(--border-color, #333);
+  margin-top: 60px;
+  padding-top: 30px;
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.footer-links a {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.footer-links a:hover {
+  color: var(--text-secondary);
+}
+
+.copyright {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
+
+input, 
+textarea, 
+select, 
+button {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color, #333);
+}
+
 @media (max-width: 1024px) {
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -200,6 +413,7 @@
   .hero-section {
     flex-direction: column;
     text-align: center;
+    
   }
   
   .hero-title {

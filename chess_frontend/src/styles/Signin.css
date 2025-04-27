@@ -4,6 +4,7 @@
   align-items: center;
   min-height: 80vh;
   padding: 20px;
+  background-color: white;  /* Added white background */
 }
 
 .signin-card {
@@ -135,4 +136,26 @@
 
 .auth-error svg {
   flex-shrink: 0;
+}
+
+/* Thêm các quy tắc CSS này vào cuối file */
+/* Đảm bảo các input có nền trắng */
+.signin-container .form-control {
+  background-color: white !important;
+  color: #333 !important;
+  border: 1px solid #ddd !important;
+}
+
+/* Đảm bảo các button có màu đúng */
+.signin-container .signin-button {
+  background-color: #3f51b5 !important;
+  color: white !important;
+}
+
+.signin-container .signin-button:hover {
+  background-color: #303f9f !important;
+}
+
+.signin-container .signin-button:disabled {
+  background-color: #bdbdbd !important;
 }

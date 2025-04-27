@@ -1,28 +1,38 @@
+/* Điều chỉnh layout chính */
 .play-container {
   display: grid;
-  grid-template-columns: 1fr 480px 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: 250px 580px 250px; /* Điều chỉnh độ rộng các phần */
   grid-template-areas: 
-    "info board sidebar"
     "info board sidebar";
-  gap: 20px;
+  gap: 40px; /* Tăng khoảng cách giữa các khu vực chính */
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 40px auto; /* Thêm margin-top và margin-bottom */
+  padding: 0 30px; /* Tăng padding ngang */
+  background-color: #18122B; /* Thêm màu nền tối cho toàn bộ container phù hợp với board */
 }
 
+/* Khu vực bên trái - thông tin người chơi */
 .game-info {
   grid-area: info;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 30px; /* Tăng khoảng cách giữa các phần tử */
+  align-self: flex-start;
+  margin-top: 20px; /* Thêm margin-top để tạo khoảng cách với đầu trang */
 }
 
 .opponent-info, .player-info {
   background-color: white;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 24px; /* Tăng padding */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  margin-bottom: 10px;
+}
+
+.opponent-info:hover, .player-info:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .opponent-info h3, .player-info h3 {
@@ -59,15 +69,25 @@
   animation: pulse 1s infinite;
 }
 
+/* Khu vực giữa - bàn cờ */
 .game-board-container {
   grid-area: board;
+  padding: 0;
+  align-self: flex-start;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
+/* Khu vực bên phải - game controls và move history */
 .game-sidebar {
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 30px; /* Tăng khoảng cách giữa các phần tử */
+  align-self: flex-start;
+  margin-top: 20px; /* Thêm margin-top để căn với game-info */
 }
 
 .game-result {
@@ -169,21 +189,85 @@
   background-color: #e0e0e0;
 }
 
-@media (max-width: 1024px) {
+/* Cập nhật media queries */
+@media (max-width: 1200px) {
   .play-container {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "board board"
-      "info sidebar";
+    grid-template-columns: 220px 480px 220px;
+    gap: 30px;
+    padding: 0 20px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .play-container {
     grid-template-columns: 1fr;
     grid-template-areas:
       "board"
       "info"
       "sidebar";
+    gap: 40px;
+    max-width: 700px;
+    padding: 30px;
+    margin: 20px auto;
+  }
+  
+  .game-board-container {
+    justify-self: center;
+    margin-bottom: 20px;
+  }
+  
+  .game-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-top: 0;
+  }
+  
+  .game-status {
+    grid-column: span 2;
+  }
+  
+  .game-sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .play-container {
+    padding: 20px;
+    gap: 30px;
+  }
+  
+  .game-info, .game-sidebar {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .game-status {
+    grid-column: auto;
+  }
+  
+  .opponent-info, .player-info {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .play-container {
+    padding: 15px;
+    gap: 25px;
+    margin: 10px auto;
+  }
+  
+  .board-container {
+    padding: 15px;
+  }
+  
+  .opponent-info, .player-info, .game-controls, .move-history {
+    padding: 15px;
+    border-radius: 8px;
   }
 }

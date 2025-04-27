@@ -4,6 +4,7 @@
   align-items: center;
   min-height: 80vh;
   padding: 20px;
+  background-color: white; /* Added white background to match Signin */
 }
 
 .signup-card {
@@ -11,7 +12,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 450px;
+  max-width: 400px; /* Changed from 450px to 400px to match Signin */
   padding: 30px;
 }
 
@@ -34,13 +35,13 @@
 .signup-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px; /* Changed from 15px to 20px to match Signin */
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px; /* Changed from 6px to 8px to match Signin */
 }
 
 .form-group label {
@@ -171,4 +172,25 @@
     flex-direction: column;
     gap: 15px;
   }
+}
+
+/* Đảm bảo các input có nền trắng */
+.signup-container .form-control {
+  background-color: white !important;
+  color: #333 !important;
+  border: 1px solid #ddd !important;
+}
+
+/* Đảm bảo các button có màu đúng */
+.signup-container .signup-button {
+  background-color: #3f51b5 !important;
+  color: white !important;
+}
+
+.signup-container .signup-button:hover {
+  background-color: #303f9f !important;
+}
+
+.signup-container .signup-button:disabled {
+  background-color: #bdbdbd !important;
 }

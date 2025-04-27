@@ -15,6 +15,8 @@ class GameService {
       casual: [],
       ranked: []
     };
+    // Lưu trữ lịch sử nước đi cho từng game
+    this.gameHistory = new Map();
     // Time-based cleanup interval (5 minutes)
     setInterval(() => this.cleanupInactiveGames(), 5 * 60 * 1000);
   }
@@ -258,6 +260,9 @@ class GameService {
       // Update game in memory
       game.lastActivity = Date.now();
       
+      // Lưu trạng thái game vào lịch sử
+      this.saveGameState(gameId);
+      
       // Save move to database
       await Game.findByIdAndUpdate(gameId, {
         $push: { moves: {
@@ -299,6 +304,183 @@ class GameService {
     }
   }
   
+  /**
+   * Lưu trữ trạng thái game vào lịch sử
+   */
+  saveGameState(gameId) {
+    const game = this.activeGames.get(gameId);
+    if (!game) return;
+    
+    // Lấy lịch sử hiện tại hoặc tạo mới nếu chưa có
+    const history = this.gameHistory.get(gameId) || [];
+    
+    // Lưu trạng thái hiện tại vào lịch sử
+    history.push({
+      fen: game.chess.fen(),
+      pgn: game.chess.pgn(),
+      currentTurn: game.chess.turn() === 'w' ? 'white' : 'black',
+      inCheck: game.chess.inCheck(),
+      timestamp: Date.now()
+    });
+    
+    // Giới hạn số lượng trạng thái lưu trữ (tùy chọn)
+    if (history.length > 20) {
+      history.shift(); // Loại bỏ trạng thái cũ nhất
+    }
+    
+    this.gameHistory.set(gameId, history);
+    
+    return history.length - 1; // Trả về chỉ số của trạng thái hiện tại
+  }
+
+  /**
+   * Xử lý yêu cầu undo nước đi
+   */
+  async requestUndo(gameId, requesterId) {
+    try {
+      const game = this.activeGames.get(gameId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      // Kiểm tra xem người yêu cầu có phải là người chơi không
+      const player = game.players.find(p => p.id === requesterId);
+      if (!player) {
+        throw new Error('Not a player in this game');
+      }
+      
+      // Không cho phép undo nếu game đã kết thúc
+      if (game.chess.isGameOver()) {
+        throw new Error('Cannot undo in a completed game');
+      }
+      
+      // Lấy ID của đối thủ để gửi yêu cầu
+      const opponent = game.players.find(p => p.id !== requesterId);
+      if (!opponent) {
+        throw new Error('Opponent not found');
+      }
+      
+      // Đánh dấu yêu cầu undo đang chờ xử lý
+      game.pendingUndoRequest = {
+        requesterId,
+        requestedAt: Date.now()
+      };
+      
+      // Trả về thông tin để socket controller có thể gửi yêu cầu tới đối thủ
+      return {
+        gameId,
+        requesterId,
+        opponentId: opponent.id
+      };
+      
+    } catch (error) {
+      logger.error(`Error requesting undo for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Xử lý chấp nhận yêu cầu undo
+   */
+  async acceptUndo(gameId, accepterId) {
+    try {
+      const game = this.activeGames.get(gameId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      // Kiểm tra xem có yêu cầu undo đang chờ xử lý không
+      if (!game.pendingUndoRequest) {
+        throw new Error('No pending undo request');
+      }
+      
+      // Kiểm tra xem người chấp nhận có phải đối thủ không
+      const accepter = game.players.find(p => p.id === accepterId);
+      if (!accepter || accepter.id === game.pendingUndoRequest.requesterId) {
+        throw new Error('Only opponent can accept undo request');
+      }
+      
+      // Lấy lịch sử nước đi
+      const history = this.gameHistory.get(gameId);
+      if (!history || history.length < 2) {
+        throw new Error('No moves to undo');
+      }
+      
+      // Xóa trạng thái hiện tại
+      history.pop();
+      
+      // Lấy trạng thái trước đó
+      const previousState = history[history.length - 1];
+      
+      // Áp dụng trạng thái trước đó
+      game.chess.load(previousState.fen);
+      
+      // Cập nhật game trong database
+      await Game.findByIdAndUpdate(gameId, {
+        fen: previousState.fen,
+        pgn: previousState.pgn,
+        $pop: { moves: 1 } // Xóa nước đi cuối cùng
+      });
+      
+      // Xóa yêu cầu undo đang chờ xử lý
+      delete game.pendingUndoRequest;
+      
+      // Cập nhật thời gian hoạt động
+      game.lastActivity = Date.now();
+      
+      // Trả về thông tin trạng thái mới
+      return {
+        gameId,
+        fen: previousState.fen,
+        currentTurn: previousState.currentTurn,
+        inCheck: previousState.inCheck,
+        legalMoves: this.getLegalMovesMap(game.chess),
+        history
+      };
+      
+    } catch (error) {
+      logger.error(`Error accepting undo for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Xử lý từ chối yêu cầu undo
+   */
+  declineUndo(gameId, declinerId) {
+    try {
+      const game = this.activeGames.get(gameId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      // Kiểm tra xem có yêu cầu undo đang chờ xử lý không
+      if (!game.pendingUndoRequest) {
+        throw new Error('No pending undo request');
+      }
+      
+      // Kiểm tra xem người từ chối có phải đối thủ không
+      const decliner = game.players.find(p => p.id === declinerId);
+      if (!decliner || decliner.id === game.pendingUndoRequest.requesterId) {
+        throw new Error('Only opponent can decline undo request');
+      }
+      
+      // Xóa yêu cầu undo đang chờ xử lý
+      delete game.pendingUndoRequest;
+      
+      // Trả về thông tin để thông báo cho người yêu cầu
+      return {
+        gameId,
+        requesterId: game.pendingUndoRequest.requesterId,
+        declinerId
+      };
+      
+    } catch (error) {
+      logger.error(`Error declining undo for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
   /**
    * Get the current status of a chess game
    */
