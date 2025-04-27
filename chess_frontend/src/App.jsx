@@ -4,6 +4,7 @@ import "./App.css";
 import { gameSubject, initGame, resetGame, undo, redo } from "./components/Game";
 import Board from "./components/Board";
 import MoveHistory from "./components/MoveHistory";
+import Home from "./pages/Home"; // Import Home component
 import Signup from "./pages/SignUp";
 import Signin from "./pages/SignIn";
 
@@ -56,15 +57,6 @@ function GamePage() {
       </div>
 
       <MoveHistory moveNotation={moveNotation} />
-    </div>
-  );
-}
-
-function Home() {
-  return (
-    <div className="home">
-      <h1>Welcome to the Chess Game</h1>
-      <Link to="/play">Start Playing</Link>
     </div>
   );
 }

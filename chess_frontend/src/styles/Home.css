@@ -156,12 +156,10 @@ body {
 .chess-piece-knight {
   width: 300px;
   height: 300px;
-  background-image: url('/images/knight.png');
-  background-size: contain;
+  background-image: url('../components/assets/son.jpg'); /* Điều chỉnh đường dẫn phù hợp */
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-color: #1a1a1a;
-  filter: brightness(0.9) contrast(1.1);
 }
 
 /* Features Section */
