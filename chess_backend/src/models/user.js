@@ -26,6 +26,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 1200,
     },
+    games: {
+      type: Number,
+      default: 0,
+    },
     wins: {
       type: Number,
       default: 0,
@@ -38,6 +42,18 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
+    avatar: {
+      type: String,
+      default: '',
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
@@ -48,10 +64,9 @@ userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    // Generate a salt
+    // Generate salt
     const salt = await bcrypt.genSalt(10);
-    
-    // Hash the password along with the new salt
+    // Hash the password
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -61,7 +76,18 @@ userSchema.pre('save', async function(next) {
 
 // Method to compare passwords for login
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw error;
+  }
 };
 
-module.exports = mongoose.model('User', userSchema);
+// Method to get public profile without sensitive data
+userSchema.methods.getPublicProfile = function() {
+  const userObject = this.toObject();
+  delete userObject.password;
+  return userObject;
+};
+
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);

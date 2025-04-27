@@ -1,0 +1,125 @@
+/* Change these colors for a black theme */
+:root {
+  --board-light: #666666; /* Dark gray for light squares */
+  --board-dark: #222222;  /* Almost black for dark squares */
+  --board-border: #000000; /* Black border */
+  --coord-color: #999999; /* Light gray for coordinates */
+}
+
+.board-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  user-select: none;
+}
+
+.board-container.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.chess-board {
+  position: relative;
+  width: 480px;
+  height: 480px;
+  border: 8px solid var(--board-border); /* Use the border color variable */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* Darker shadow for contrast */
+}
+
+.board-row {
+  display: flex;
+  height: 12.5%;
+}
+
+.square {
+  width: 12.5%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.square.light {
+  background-color: var(--board-light);
+}
+
+.square.dark {
+  background-color: var(--board-dark);
+}
+
+.square.possible-move::before {
+  content: '';
+  position: absolute;
+  width: 25%;
+  height: 25%;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3); /* Lighter indicator for visibility */
+}
+
+.square.check {
+  background-color: #8B0000 !important; /* Darker red for check indication */
+}
+
+.piece {
+  width: 90%;
+  height: 90%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 42px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.piece.dragging {
+  opacity: 0.5;
+}
+
+.board-coordinates {
+  display: flex;
+  position: absolute;
+}
+
+.board-coordinates.files {
+  bottom: -25px;
+  left: 0;
+  right: 0;
+  justify-content: space-around;
+  width: 100%;
+}
+
+.board-coordinates.ranks {
+  top: 0;
+  bottom: 0;
+  left: -25px;
+  flex-direction: column;
+  justify-content: space-around;
+  height: 100%;
+}
+
+/* Update the coordinates color for better visibility on dark theme */
+.board-coordinates div {
+  font-size: 14px;
+  color: var(--coord-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 768px) {
+  .chess-board {
+    width: 320px;
+    height: 320px;
+  }
+  
+  .piece {
+    font-size: 28px;
+  }
+  
+  .board-coordinates div {
+    font-size: 11px;
+  }
+}

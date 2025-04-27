@@ -1,15 +1,22 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../styles/Home.css";
 // Có thể import thêm các biểu tượng nếu cần
 // import { FaChessKnight, FaTrophy, FaUsers, FaChartLine } from "react-icons/fa";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     document.title = "Chess Master";
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="home-container">
@@ -18,8 +25,18 @@ const Home = () => {
         <nav className="home-navbar">
           <div className="nav-logo">Chess Master</div>
           <div className="nav-links">
-            <Link to="/signin" className="nav-link">Sign In</Link>
-            <Link to="/signup" className="nav-link nav-button">Sign Up</Link>
+            {isAuthenticated ? (
+              <>
+                <span className="welcome-user">Welcome, {user.username}</span>
+                <Link to="/lobby" className="nav-link">Game Lobby</Link>
+                <button onClick={handleLogout} className="nav-link">Log Out</button>
+              </>
+            ) : (
+              <>
+                <Link to="/signin" className="nav-link">Sign In</Link>
+                <Link to="/signup" className="nav-link nav-button">Sign Up</Link>
+              </>
+            )}
           </div>
         </nav>
       </header>
@@ -34,15 +51,26 @@ const Home = () => {
               Master strategies, compete in tournaments, and climb the global rankings.
             </p>
             <div className="hero-buttons">
-              <button
-                onClick={() => navigate("/play")}
-                className="primary-button"
-              >
-                Play Now
-              </button>
-              <Link to="/signup" className="secondary-button">
-                Create Account
-              </Link>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => navigate("/lobby")}
+                  className="primary-button"
+                >
+                  Enter Lobby
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate("/play")}
+                    className="primary-button"
+                  >
+                    Play Now
+                  </button>
+                  <Link to="/signup" className="secondary-button">
+                    Create Account
+                  </Link>
+                </>
+              )}
             </div>
           </div>
           <div className="hero-image">
@@ -70,15 +98,17 @@ const Home = () => {
           </div>
         </div>
 
-        {/* CTA Section */}
-        <section className="cta-section">
-          <h2>Ready to Test Your Skills?</h2>
-          <p>Join thousands of players already enjoying Chess Master. Sign up now and start playing instantly!</p>
-          <div className="cta-buttons">
-            <Link to="/signup" className="cta-button signup">Sign Up Free</Link>
-            <Link to="/signin" className="cta-button signin">Sign In</Link>
-          </div>
-        </section>
+        {/* Conditionally show CTA Section only for non-authenticated users */}
+        {!isAuthenticated && (
+          <section className="cta-section">
+            <h2>Ready to Test Your Skills?</h2>
+            <p>Join thousands of players already enjoying Chess Master. Sign up now and start playing instantly!</p>
+            <div className="cta-buttons">
+              <Link to="/signup" className="cta-button signup">Sign Up Free</Link>
+              <Link to="/signin" className="cta-button signin">Sign In</Link>
+            </div>
+          </section>
+        )}
 
         {/* How to Play Section */}
         <h2 className="section-title">How to Get Started</h2>

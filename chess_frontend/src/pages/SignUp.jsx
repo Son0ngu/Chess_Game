@@ -5,7 +5,7 @@ import axios from "axios"; // Use axios instead of socket
 import "../styles/Signup.css"; 
 
 // API base URL - match your backend port
-const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:5000";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -73,11 +73,7 @@ const SignUp = () => {
     
     try {
       // Call the register API endpoint
-      const response = await axios.post(`${API_URL}/users/register`, {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password
-      });
+      const response = await axios.post(`${API_URL}/auth/register`, formData);
       
       // Handle successful registration
       if (response.data) {
