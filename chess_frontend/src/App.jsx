@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import "./App.css";
-import { gameSubject, initGame, resetGame, undo, redo } from "./Game";
-import Board from "./Board";
-import MoveHistory from "./MoveHistory";
-import Signup from "./User/SignUp";
-import Signin from "./User/SignIn";
+import { gameSubject, initGame, resetGame, undo, redo } from "./components/Game";
+import Board from "./components/Board";
+import MoveHistory from "./components/MoveHistory";
+import Home from "./pages/Home"; // Import Home component
+import Signup from "./pages/SignUp";
+import Signin from "./pages/SignIn";
 
 function GamePage() {
   const [board, setBoard] = useState([]);
@@ -33,10 +34,6 @@ function GamePage() {
 
   return (
     <div className="container">
-      <nav>
-        <Link to="/signup">Sign Up</Link> | <Link to="/signin">Sign In</Link>
-      </nav>
-
       <div className="game-controls vertical-text">
         <button onClick={undo} disabled={!canUndo || isGameOver}>
           <span className="vertical-text">UNDO</span>
@@ -72,9 +69,10 @@ const App = () => {
       </nav>
 
       <Routes>
-        <Route path="/" element={<GamePage />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Signin />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/play" element={<GamePage />} />
       </Routes>
     </Router>
   );
