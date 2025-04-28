@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
 const logger = require('../utils/logger');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -170,6 +173,97 @@ router.post('/logout', auth, async (req, res) => {
   } catch (err) {
     logger.error(`Logout error: ${err.message}`);
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+const transporter = nodemailer.createTransport({
+  service: 'Gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+router.post('/recover', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: "No user with that email" });
+    }
+
+    // 1. Generate a reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiration = new Date(Date.now() + 900000); // 15 phút
+
+    user.resetToken = resetToken;
+    user.resetTokenExpiration = resetTokenExpiration;
+
+    console.log(resetTokenExpiration);
+
+    console.log(`Generated reset token: ${resetToken}`);
+    console.log(`Token expires at: ${new Date(resetTokenExpiration)}`);
+
+    await user.save();
+
+    // 2. Create reset URL
+    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`; 
+    // Nếu bạn deploy, đổi localhost:3000 thành yourfrontend.com
+
+    // 3. Send email
+    await transporter.sendMail({
+      to: user.email,
+      subject: 'Password Reset Request',
+      html: `
+        <h2>Password Reset</h2>
+        <p>Click the link below to reset your password:</p>
+        <a href="${resetUrl}">Reset Password</a>
+        <p>This link will expire in 1 hour.</p>
+      `,
+    });
+
+    res.json({ message: "Recovery email sent! Check your inbox." });
+  } catch (err) {
+    console.error("Password recovery error:", err);
+    res.status(500).json({ error: "Password recovery failed" });
+  }
+});
+
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    console.log("Received reset token:", token);
+    console.log("Received new password:", password);
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() }, // token còn hạn
+    });
+
+    if (!user) {
+      console.log("No user found with matching token or token expired.");
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+
+    console.log("User found:", user.email);
+
+    // Hash password mới
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Update mật khẩu
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+    await user.save();
+
+    res.json({ message: "Password has been reset successfully!" });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

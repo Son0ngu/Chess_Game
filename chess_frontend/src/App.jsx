@@ -6,6 +6,8 @@ import Lobby from './pages/Lobby';
 import Play from './pages/Play';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
+import PWRec from './pages/PWRec';
+import ResetPassword from './pages/ResetPW';
 import Spinner from './components/Spinner';
 import { connectSocket, disconnectSocket } from './services/socket';
 import './styles/App.css';
@@ -48,7 +50,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
-        
+        <Route path="/pwrecovery" element={<PWRec />} />
         {/* Protected routes */}
         <Route 
           path="/lobby" 
@@ -76,7 +78,14 @@ const App = () => {
             </ProtectedRoute>
           } 
         />
-        
+
+        <Route 
+          path="/reset-password/:token" 
+          element={
+                <ResetPassword />
+          }
+        />
+
         {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
