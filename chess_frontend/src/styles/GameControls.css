@@ -53,15 +53,6 @@
   background-color: #1976d2;
 }
 
-.new-game-btn {
-  background-color: #4caf50;
-  color: white;
-}
-
-.new-game-btn:hover {
-  background-color: #388e3c;
-}
-
 .game-actions {
   display: flex;
   width: 100%;

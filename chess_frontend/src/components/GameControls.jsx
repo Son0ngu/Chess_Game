@@ -2,40 +2,16 @@ import React from 'react';
 import '../styles/GameControls.css';
 
 const GameControls = ({ 
-  onUndoRequest, 
-  onRedoRequest,
-  onNewGame, 
   canResign,
   canOfferDraw,
-  canUndo,
-  canRedo,
   onResign, 
-  onOfferDraw 
+  onOfferDraw,
+  gameOver
 }) => {
   return (
     <div className="game-controls">
       <h3>Game Controls</h3>
       <div className="controls-grid">
-        <button 
-          className="control-btn undo-btn"
-          onClick={onUndoRequest}
-          disabled={!canUndo}
-        >
-          Undo Move
-        </button>
-        <button 
-          className="control-btn redo-btn"
-          onClick={onRedoRequest}
-          disabled={!canRedo}
-        >
-          Redo Move
-        </button>
-        <button 
-          className="control-btn new-game-btn"
-          onClick={onNewGame}
-        >
-          New Game
-        </button>
         <button 
           className="control-btn resign-btn"
           onClick={onResign}

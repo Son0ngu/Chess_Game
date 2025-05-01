@@ -1,13 +1,13 @@
 // src/pages/PasswordRecovery.jsx
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom"; // Removed 'useNavigate' as it's not being used
 import axios from "axios";
 import "../styles/Signin.css"; // Tận dụng luôn CSS từ SignIn
 
 const API_URL = "http://localhost:5000"; // Đổi nếu cần
 
 const PWRec = () => {
-  const navigate = useNavigate();
+  // Removed 'navigate' as it's not being used
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -55,34 +55,33 @@ const PWRec = () => {
     }
   };
 
-    return (
-        <div className="signin-container">
-        <h2>Password Recovery</h2>
-        <form onSubmit={handleSubmit}>
-            <div className="form-group">
-            <label htmlFor="email">Email:</label>
-            <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-            />
-            {errors.email && <span className="error">{errors.email}</span>}
-            </div>
-            {serverMessage.text && (
-            <div className={`message ${serverMessage.type}`}>
-                {serverMessage.text}
-            </div>
-            )}
-            <button type="submit" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Send Recovery Email"}
-            </button>
-        </form>
-        <Link to="/signin" className="back-to-signin">Back to Sign In</Link>
+  return (
+    <div className="signin-container">
+      <h2>Password Recovery</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="email">Email:</label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          {errors.email && <span className="error">{errors.email}</span>}
         </div>
-    );
-  
+        {serverMessage.text && (
+          <div className={`message ${serverMessage.type}`}>
+            {serverMessage.text}
+          </div>
+        )}
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Sending..." : "Send Recovery Email"}
+        </button>
+      </form>
+      <Link to="/signin" className="back-to-signin">Back to Sign In</Link>
+    </div>
+  );
 };
 
 export default PWRec;

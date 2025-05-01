@@ -20,43 +20,35 @@ const Play = () => {
   const [showResignDialog, setShowResignDialog] = useState(false);
   const [showDrawOfferDialog, setShowDrawOfferDialog] = useState(false);
   const [receivedDrawOffer, setReceivedDrawOffer] = useState(false);
+  const [resignationNotice, setResignationNotice] = useState(null);
+  const [drawAcceptedNotice, setDrawAcceptedNotice] = useState(null);
 
-  // Get chess game state from custom hook
   const {
     board,
     currentTurn,
     playerColor,
     moves,
-    check,
     makeMove,
-    undo,
-    redo,
-    reset,
     position,
     inCheck,
     possibleMoves,
     gameStatus
   } = useChess(gameId);
   
-  // Handle authentication redirect
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
       navigate("/signin");
     }
   }, [isAuthenticated, navigate, isLoading]);
 
-  // Initial game setup
   useEffect(() => {
     if (!gameId || !isAuthenticated) return;
 
     setIsLoading(true);
 
-    // Join game room
     socket.emit("game:join", { gameId });
 
-    // Get game data
     socket.on("game:data", (data) => {
-      // Get opponent information
       const opponentPlayer = data.players.find(
         (player) => player.id !== user.id
       );
@@ -68,27 +60,57 @@ const Play = () => {
       setIsLoading(false);
     });
 
-    // Listen for game over events
     socket.on("game:over", (data) => {
+      console.log("Game over event received:", data);
       setGameOver(true);
       setGameResult(data.result);
+      setReceivedDrawOffer(false);
+      setShowDrawOfferDialog(false);
     });
 
-    // Listen for draw offers
     socket.on("game:drawOffer", () => {
       setReceivedDrawOffer(true);
     });
+    
+    socket.on("game:drawAccepted", (data) => {
+      console.log("Draw accepted by:", data.by);
+      
+      setGameOver(true);
+      setGameResult({ 
+        type: "draw", 
+        reason: "agreement" 
+      });
+      
+      setShowDrawOfferDialog(false);
+      
+      setDrawAcceptedNotice({
+        by: data.by || "Opponent"
+      });
+    });
+
+    socket.on("game:playerResigned", (data) => {
+      console.log("Player resigned:", data);
+      setResignationNotice({
+        username: data.username,
+        message: data.message || "The noob resign!"
+      });
+      setGameOver(true);
+      setGameResult({ 
+        type: "resignation", 
+        winner: user.id 
+      });
+    });
 
     return () => {
-      // Clean up socket listeners when component unmounts
       socket.off("game:data");
       socket.off("game:over");
       socket.off("game:drawOffer");
+      socket.off("game:drawAccepted");
+      socket.off("game:playerResigned");
       socket.emit("game:leave", { gameId });
     };
   }, [gameId, isAuthenticated, user]);
 
-  // Check for game status changes
   useEffect(() => {
     if (gameStatus) {
       if (gameStatus.isGameOver) {
@@ -98,6 +120,12 @@ const Play = () => {
     }
   }, [gameStatus]);
 
+  const handleBackToLobby = () => {
+    if (gameId) {
+      socket.emit("game:leave", { gameId });
+    }
+    navigate("/lobby");
+  };
   
   const handleResign = () => {
     socket.emit("game:resign", { gameId });
@@ -126,14 +154,6 @@ const Play = () => {
     setReceivedDrawOffer(false);
   };
 
-  const setUndo = () => {
-    socket.emit("game:requestUndo", { gameId });
-  };
-
-  const setRedo = () => {
-    socket.emit("game:requestRedo", { gameId });  
-  };
-
   if (isLoading) {
     return <Spinner />;
   }
@@ -149,18 +169,14 @@ const Play = () => {
         )}
         
         <div className="game-status">
-          {gameOver ? (
+          {gameOver && (
             <div className="game-result">
               <h2>Game Over</h2>
               {gameResult?.type === "checkmate" && (
-                <p>
-                  Checkmate! {gameResult.winner === user.id
-                    ? "You won"
-                    : "You lost"}
-                </p>
+                <p>Checkmate! {gameResult.winner === user.id ? "You won" : "You lost"}</p>
               )}
               {gameResult?.type === "draw" && (
-                <p>Game drawn by {gameResult.reason}</p>
+                <p>Game drawn by {gameResult.reason || "agreement"}</p>
               )}
               {gameResult?.type === "resignation" && (
                 <p>
@@ -169,21 +185,16 @@ const Play = () => {
                     : "You resigned. You lost."}
                 </p>
               )}
-              {gameResult?.type === "timeout" && (
-                <p>
-                  {gameResult.winner === user.id
-                    ? "Opponent ran out of time. You won!"
-                    : "You ran out of time. You lost."}
-                </p>
-              )}
+              
               <button 
-                className="new-game-btn"
-                onClick={() => navigate("/lobby")}
+                className="back-to-lobby-btn"
+                onClick={handleBackToLobby}
               >
                 Back to Lobby
               </button>
             </div>
-          ) : (
+          )}
+          {!gameOver && (
             <div>
               <div className="current-turn">
                 {currentTurn === playerColor ? "Your turn" : "Opponent's turn"}
@@ -212,27 +223,20 @@ const Play = () => {
         
         <div className="game-controls-container">
           <GameControls
-            onNewGame={() => navigate("/lobby")}
             canResign={!gameOver}
             onResign={() => setShowResignDialog(true)}
             canOfferDraw={!gameOver}
             onOfferDraw={() => setShowDrawOfferDialog(true)}
-            canUndo={(moves.length > 0) && !gameOver}
-            onUndoRequest={() => setUndo(true)}
-            //canRedo={futureMoves.length > 0 && !gameOver}
-            canRedo={true}
-            onRedoRequest={() => setRedo(true)}
+            gameOver={gameOver}
           />
         </div>
 
-        {/* Player info */}
         <div className="player-info">
           <h3>You ({playerColor})</h3>
           <div className="rating">Rating: {user.elo}</div>
         </div>
       </div>
 
-      {/* Resign confirmation dialog */}
       {showResignDialog && (
         <div className="dialog-overlay">
           <div className="dialog">
@@ -250,7 +254,21 @@ const Play = () => {
         </div>
       )}
 
-      {/* Draw offer dialog */}
+      {/* Resignation notification for the opponent */}
+      {resignationNotice && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3>Opponent Resigned</h3>
+            <p><strong>{resignationNotice.username}</strong>: {resignationNotice.message}</p>
+            <div className="dialog-buttons">
+              <button onClick={handleBackToLobby} className="confirm-btn">
+                Back to Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDrawOfferDialog && (
         <div className="dialog-overlay">
           <div className="dialog">
@@ -268,7 +286,6 @@ const Play = () => {
         </div>
       )}
 
-      {/* Received draw offer dialog */}
       {receivedDrawOffer && (
         <div className="dialog-overlay">
           <div className="dialog">
@@ -280,6 +297,20 @@ const Play = () => {
               </button>
               <button onClick={handleDeclineDraw} className="cancel-btn">
                 Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {drawAcceptedNotice && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3>Draw Accepted</h3>
+            <p>{drawAcceptedNotice.by} accepted the draw offer.</p>
+            <div className="dialog-buttons">
+              <button onClick={handleBackToLobby} className="confirm-btn">
+                Back to Lobby
               </button>
             </div>
           </div>

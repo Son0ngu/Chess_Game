@@ -26,19 +26,21 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 1200,
     },
-    games: {
+    // Renamed from games to gamesPlayed to match controller
+    gamesPlayed: {
       type: Number,
       default: 0,
     },
-    wins: {
+    // Renamed from wins to gamesWon to match controller
+    gamesWon: {
       type: Number,
       default: 0,
     },
-    losses: {
+    gamesLost: {
       type: Number,
       default: 0,
     },
-    draws: {
+    gamesDrawn: {
       type: Number,
       default: 0,
     },
@@ -50,9 +52,28 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
-    isOnline: {
-      type: Boolean,
-      default: false,
+    // Changed isOnline to status with multiple options
+    status: {
+      type: String,
+      enum: ['offline', 'online', 'in_game', 'looking_for_match'],
+      default: 'offline',
+    },
+    // Added field to track current game
+    currentGame: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game',
+      default: null,
+    },
+    // Added gameMode preference for matchmaking
+    gameMode: {
+      type: String,
+      enum: ['casual', 'ranked'],
+      default: 'casual',
+    },
+    // Added time control preference for matchmaking
+    timeControlPreference: {
+      type: String,
+      default: '10min',
     },
     resetToken: {
       type: String,
@@ -96,6 +117,37 @@ userSchema.methods.getPublicProfile = function() {
   const userObject = this.toObject();
   delete userObject.password;
   return userObject;
+};
+
+// Method to calculate win rate
+userSchema.methods.getWinRate = function() {
+  if (this.gamesPlayed === 0) return 0;
+  return Math.round((this.gamesWon / this.gamesPlayed) * 100);
+};
+
+/**
+ * Data migration function to update existing users
+ * Use this when deploying the updated model to production
+ */
+userSchema.statics.migrateData = async function() {
+  try {
+    // Convert old field names to new ones
+    const users = await this.find({});
+    for (const user of users) {
+      // Only update if using old field names
+      if (typeof user.games === 'number' && typeof user.gamesPlayed === 'undefined') {
+        user.gamesPlayed = user.games;
+        user.gamesWon = user.wins || 0;
+        user.gamesLost = user.losses || 0;
+        user.gamesDrawn = user.draws || 0;
+        user.status = user.isOnline ? 'online' : 'offline';
+        await user.save();
+      }
+    }
+    console.log('User data migration completed successfully');
+  } catch (error) {
+    console.error('Error migrating user data:', error);
+  }
 };
 
 module.exports = mongoose.models.User || mongoose.model('User', userSchema);
