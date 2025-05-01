@@ -288,6 +288,12 @@ const setupGameSocket = (io) => {
         // Update game status in database
         const result = await GameService.resignGame(gameId, socket.user.id);
         
+        // Notify other player about the resignation
+        socket.to(`game:${gameId}`).emit('game:playerResigned', {
+          username: socket.user.username,
+          message: "The noob resign!"
+        });
+        
         // Broadcast game over to all players
         io.to(`game:${gameId}`).emit('game:over', {
           result: {
