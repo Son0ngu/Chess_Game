@@ -18,8 +18,6 @@ const useChess = (gameId) => {
   const [playerColor, setPlayerColor] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState({});
   const [selectedPiece, setSelectedPiece] = useState(null);
-  const [pastPositions, setPastPositions] = useState([]);
-  const [futurePositions, setFuturePositions] = useState([]);
   const [inCheck, setInCheck] = useState(false);
   const [gameStatus, setGameStatus] = useState({
     isGameOver: false,
@@ -74,7 +72,7 @@ const useChess = (gameId) => {
       if (data.lastMove) {
         setMoves(prevMoves => [...prevMoves, data.lastMove]);
       } else if (data.history) {
-        setMoves(data.history); // fallback khi undo hoặc khi join game
+        setMoves(data.history); // fallback when joining game
       }
       
       if (data.gameOver) {
@@ -99,47 +97,7 @@ const useChess = (gameId) => {
       socket.off('game:update');
       socket.off('game:data');
       socket.off('game:moveRejected');
-      socket.off('game:undoDeclined');
-      socket.off('game:undoConfirmed');
       socket.emit('game:leave', { gameId });
-    };
-  }, [gameId, user]);
-
-  // Handle undo declined event
-  useEffect(() => {
-    const handleUndoDeclined = (data) => {
-      if (!data) return;
-      alert(`${data.by || 'Opponent'} has declined the undo request.`);
-    };
-    
-    socket.on('game:undoDeclined', handleUndoDeclined);
-    
-    return () => {
-      socket.off('game:undoDeclined', handleUndoDeclined);
-    };
-  }, []);
-  
-  // Handle undo confirmed event
-  useEffect(() => {
-    const handleUndoConfirmed = (data) => {
-      if (!data || !user) return;
-      
-      const username = user.username || 'You';
-      
-      // If we're the requester, ignore this event
-      if (data.by === username) return;
-      
-      const accept = window.confirm(`${data.by || 'Opponent'} wants to undo the last move. Do you agree?`);
-      socket.emit('game:undoResponse', {
-        gameId,
-        accepted: accept
-      });
-    };
-    
-    socket.on('game:undoConfirmed', handleUndoConfirmed);
-    
-    return () => {
-      socket.off('game:undoConfirmed', handleUndoConfirmed);
     };
   }, [gameId, user]);
   
@@ -159,9 +117,6 @@ const useChess = (gameId) => {
     if (gameStatus.isGameOver || currentTurn !== playerColor) {
       return false;
     }
-
-    setPastPositions(prev => [...prev, position]);
-    setFuturePositions([]);
     
     // Send move to server
     socket.emit('game:move', {
@@ -171,33 +126,7 @@ const useChess = (gameId) => {
     });
     
     return true;
-  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver, position]);
-  
-  // Request undo
-  const undo = useCallback(() => {
-    if (!gameId || gameStatus.isGameOver || currentTurn !== playerColor) {
-      return false;
-    }
-    
-    // Send undo request to the server
-    socket.emit('game:requestUndo', { gameId });
-  
-    // Optionally, you can disable the undo button or show a loading state while waiting for the server response
-    return true;
   }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
-
-  // Handle redo (typically only for offline or analysis mode)
-  const redo = useCallback(() => {
-    if (futurePositions.length === 0) return;
-    
-    const newPosition = futurePositions[futurePositions.length - 1];
-    setPastPositions(prev => [...prev, position]);
-    setFuturePositions(prev => prev.slice(0, -1));
-    setPosition(newPosition);
-    
-    // Emit redo event to server if needed
-    socket.emit('game:redo', { gameId, position: newPosition });
-  }, [futurePositions, position, gameId]);
   
   // Reset game
   const reset = useCallback(() => {
@@ -216,8 +145,6 @@ const useChess = (gameId) => {
     gameStatus,
     selectPiece,
     makeMove,
-    undo,
-    redo,
     reset
   };
 };
