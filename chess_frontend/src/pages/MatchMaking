@@ -1,0 +1,103 @@
+.matchmaking-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #1E1E2E;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.matchmaking-container h2 {
+  color: #FFFFFF;
+  font-size: 24px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.error-message {
+  background-color: rgba(255, 0, 0, 0.2);
+  color: #FF6B6B;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.searching-status {
+  text-align: center;
+  padding: 20px;
+}
+
+.searching-status p {
+  margin: 10px 0;
+  color: #E5E5E5;
+}
+
+.cancel-button {
+  background-color: #FF5252;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.cancel-button:hover {
+  background-color: #FF0000;
+}
+
+.match-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.match-options button {
+  background-color: #6A5ACD;
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.match-options button:hover {
+  background-color: #483D8B;
+}
+
+.active-players {
+  margin-top: 30px;
+}
+
+.active-players h3 {
+  color: #FFFFFF;
+  font-size: 18px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.players-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.player-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.player-item span {
+  color: #E5E5E5;
+}

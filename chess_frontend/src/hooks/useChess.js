@@ -35,27 +35,22 @@ const useChess = (gameId) => {
     
     // Handle initial game data
     const handleGameData = (data) => {
+      if (!data) return;
+      
       setBoard(data.board || initialBoard());
       setPosition(data.position || null);
       setMoves(data.moves || []);
       setCurrentTurn(data.currentTurn || 'white');
       
       // Set player color based on the player's user ID
-      const playerData = data.players.find(p => p.id === user?.id);
-      setPlayerColor(playerData?.color || 'white');
+      if (data.players && Array.isArray(data.players) && user) {
+        const playerData = data.players.find(p => p && p.id === user.id);
+        setPlayerColor(playerData?.color || 'white');
+      }
       
       // Update game status
       setInCheck(data.inCheck || false);
       setPossibleMoves(data.legalMoves || {});
-
-      const handleGameUpdate = (data) => {
-        // Cập nhật bàn cờ, lịch sử nước đi, và các trạng thái khác
-        setBoard(data.board);  // Cập nhật bàn cờ
-        setPosition(data.position);  // Cập nhật FEN của bàn cờ
-        setMoves(data.history || []);  // Cập nhật lịch sử nước đi
-        setCurrentTurn(data.currentTurn);  // Cập nhật lượt đi
-        setInCheck(data.inCheck || false);  // Kiểm tra trạng thái bị check
-        setPossibleMoves(data.legalMoves || {});  // Cập nhật các nước đi hợp lệ
 
       if (data.gameOver) {
         setGameStatus({
@@ -64,15 +59,15 @@ const useChess = (gameId) => {
         });
       }
     };
-  }
 
     // Listen for game updates
     socket.on('game:update', (data) => {
+      if (!data) return;
+      
       console.log("Game update received:", data.board, data.position);
-      setBoard(data.board);
-      setPosition(data.position);
-      //setMoves(prevMoves => [...prevMoves, data.lastMove]);
-      setCurrentTurn(data.currentTurn);
+      setBoard(data.board || initialBoard());
+      setPosition(data.position || null);
+      setCurrentTurn(data.currentTurn || 'white');
       setInCheck(data.inCheck || false);
       setPossibleMoves(data.legalMoves || {});
 
@@ -104,24 +99,49 @@ const useChess = (gameId) => {
       socket.off('game:update');
       socket.off('game:data');
       socket.off('game:moveRejected');
+      socket.off('game:undoDeclined');
+      socket.off('game:undoConfirmed');
       socket.emit('game:leave', { gameId });
     };
   }, [gameId, user]);
 
-  socket.on('game:undoDeclined', ({ by }) => {
-    alert(`${by} đã từ chối yêu cầu undo.`);
-  });
+  // Handle undo declined event
+  useEffect(() => {
+    const handleUndoDeclined = (data) => {
+      if (!data) return;
+      alert(`${data.by || 'Opponent'} has declined the undo request.`);
+    };
+    
+    socket.on('game:undoDeclined', handleUndoDeclined);
+    
+    return () => {
+      socket.off('game:undoDeclined', handleUndoDeclined);
+    };
+  }, []);
   
-  socket.on('game:undoConfirmed', ({ by }) => {
-    if (from === currentUsername) return; // Bỏ qua nếu là mình gửi
-
-  const accept = window.confirm(`${from} muốn undo. Bạn có đồng ý không?`);
-  socket.emit('game:undoResponse', {
-    gameId,
-    accepted: accept
-  });
-  });
-  
+  // Handle undo confirmed event
+  useEffect(() => {
+    const handleUndoConfirmed = (data) => {
+      if (!data || !user) return;
+      
+      const username = user.username || 'You';
+      
+      // If we're the requester, ignore this event
+      if (data.by === username) return;
+      
+      const accept = window.confirm(`${data.by || 'Opponent'} wants to undo the last move. Do you agree?`);
+      socket.emit('game:undoResponse', {
+        gameId,
+        accepted: accept
+      });
+    };
+    
+    socket.on('game:undoConfirmed', handleUndoConfirmed);
+    
+    return () => {
+      socket.off('game:undoConfirmed', handleUndoConfirmed);
+    };
+  }, [gameId, user]);
   
   // Handle piece selection and move highlighting
   const selectPiece = useCallback((piece, position) => {
@@ -151,7 +171,7 @@ const useChess = (gameId) => {
     });
     
     return true;
-  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
+  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver, position]);
   
   // Request undo
   const undo = useCallback(() => {
@@ -165,7 +185,6 @@ const useChess = (gameId) => {
     // Optionally, you can disable the undo button or show a loading state while waiting for the server response
     return true;
   }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
-
 
   // Handle redo (typically only for offline or analysis mode)
   const redo = useCallback(() => {
