@@ -98,6 +98,7 @@ const Play = () => {
     }
   }, [gameStatus]);
 
+  
   const handleResign = () => {
     socket.emit("game:resign", { gameId });
     setGameOver(true);
@@ -123,6 +124,14 @@ const Play = () => {
   const handleDeclineDraw = () => {
     socket.emit("game:declineDraw", { gameId });
     setReceivedDrawOffer(false);
+  };
+
+  const setUndo = () => {
+    socket.emit("game:requestUndo", { gameId });
+  };
+
+  const setRedo = () => {
+    socket.emit("game:requestRedo", { gameId });  
   };
 
   if (isLoading) {
@@ -203,12 +212,16 @@ const Play = () => {
         
         <div className="game-controls-container">
           <GameControls
-            onUndoRequest={() => socket.emit("game:requestUndo", { gameId })}
             onNewGame={() => navigate("/lobby")}
             canResign={!gameOver}
-            canOfferDraw={!gameOver}
             onResign={() => setShowResignDialog(true)}
+            canOfferDraw={!gameOver}
             onOfferDraw={() => setShowDrawOfferDialog(true)}
+            canUndo={(moves.length > 0) && !gameOver}
+            onUndoRequest={() => setUndo(true)}
+            //canRedo={futureMoves.length > 0 && !gameOver}
+            canRedo={true}
+            onRedoRequest={() => setRedo(true)}
           />
         </div>
 

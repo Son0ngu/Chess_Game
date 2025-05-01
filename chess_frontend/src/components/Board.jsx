@@ -8,6 +8,7 @@ export default function Board({ board, position, playerColor = 'white', possible
 
   useEffect(() => {
     // Tạo bản sao của bàn cờ
+    console.log("Board updated:", board);
     setCurrBoard(board.flat());
   }, [board]);
 

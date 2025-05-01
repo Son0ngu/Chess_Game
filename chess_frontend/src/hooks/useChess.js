@@ -18,6 +18,8 @@ const useChess = (gameId) => {
   const [playerColor, setPlayerColor] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState({});
   const [selectedPiece, setSelectedPiece] = useState(null);
+  const [pastPositions, setPastPositions] = useState([]);
+  const [futurePositions, setFuturePositions] = useState([]);
   const [inCheck, setInCheck] = useState(false);
   const [gameStatus, setGameStatus] = useState({
     isGameOver: false,
@@ -45,7 +47,16 @@ const useChess = (gameId) => {
       // Update game status
       setInCheck(data.inCheck || false);
       setPossibleMoves(data.legalMoves || {});
-      
+
+      const handleGameUpdate = (data) => {
+        // Cập nhật bàn cờ, lịch sử nước đi, và các trạng thái khác
+        setBoard(data.board);  // Cập nhật bàn cờ
+        setPosition(data.position);  // Cập nhật FEN của bàn cờ
+        setMoves(data.history || []);  // Cập nhật lịch sử nước đi
+        setCurrentTurn(data.currentTurn);  // Cập nhật lượt đi
+        setInCheck(data.inCheck || false);  // Kiểm tra trạng thái bị check
+        setPossibleMoves(data.legalMoves || {});  // Cập nhật các nước đi hợp lệ
+
       if (data.gameOver) {
         setGameStatus({
           isGameOver: true,
@@ -53,15 +64,23 @@ const useChess = (gameId) => {
         });
       }
     };
-    
+  }
+
     // Listen for game updates
     socket.on('game:update', (data) => {
+      console.log("Game update received:", data.board, data.position);
       setBoard(data.board);
       setPosition(data.position);
-      setMoves(prevMoves => [...prevMoves, data.lastMove]);
+      //setMoves(prevMoves => [...prevMoves, data.lastMove]);
       setCurrentTurn(data.currentTurn);
       setInCheck(data.inCheck || false);
       setPossibleMoves(data.legalMoves || {});
+
+      if (data.lastMove) {
+        setMoves(prevMoves => [...prevMoves, data.lastMove]);
+      } else if (data.history) {
+        setMoves(data.history); // fallback khi undo hoặc khi join game
+      }
       
       if (data.gameOver) {
         setGameStatus({
@@ -88,6 +107,21 @@ const useChess = (gameId) => {
       socket.emit('game:leave', { gameId });
     };
   }, [gameId, user]);
+
+  socket.on('game:undoDeclined', ({ by }) => {
+    alert(`${by} đã từ chối yêu cầu undo.`);
+  });
+  
+  socket.on('game:undoConfirmed', ({ by }) => {
+    if (from === currentUsername) return; // Bỏ qua nếu là mình gửi
+
+  const accept = window.confirm(`${from} muốn undo. Bạn có đồng ý không?`);
+  socket.emit('game:undoResponse', {
+    gameId,
+    accepted: accept
+  });
+  });
+  
   
   // Handle piece selection and move highlighting
   const selectPiece = useCallback((piece, position) => {
@@ -105,6 +139,9 @@ const useChess = (gameId) => {
     if (gameStatus.isGameOver || currentTurn !== playerColor) {
       return false;
     }
+
+    setPastPositions(prev => [...prev, position]);
+    setFuturePositions([]);
     
     // Send move to server
     socket.emit('game:move', {
@@ -118,15 +155,30 @@ const useChess = (gameId) => {
   
   // Request undo
   const undo = useCallback(() => {
+    if (!gameId || gameStatus.isGameOver || currentTurn !== playerColor) {
+      return false;
+    }
+    
+    // Send undo request to the server
     socket.emit('game:requestUndo', { gameId });
-  }, [gameId]);
   
+    // Optionally, you can disable the undo button or show a loading state while waiting for the server response
+    return true;
+  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
+
+
   // Handle redo (typically only for offline or analysis mode)
   const redo = useCallback(() => {
-    // In a real-time multiplayer game, redo might not be applicable
-    // This would be more useful in offline analysis mode
-    console.warn('Redo not implemented for live games');
-  }, []);
+    if (futurePositions.length === 0) return;
+    
+    const newPosition = futurePositions[futurePositions.length - 1];
+    setPastPositions(prev => [...prev, position]);
+    setFuturePositions(prev => prev.slice(0, -1));
+    setPosition(newPosition);
+    
+    // Emit redo event to server if needed
+    socket.emit('game:redo', { gameId, position: newPosition });
+  }, [futurePositions, position, gameId]);
   
   // Reset game
   const reset = useCallback(() => {

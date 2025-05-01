@@ -682,6 +682,27 @@ class GameService {
       rating: p.elo
     }));
   }
+
+  async undoMove(game, userId) {
+    // Make sure there is a history of moves to undo
+    if (game.moves.length < 1) {
+      return null; // No moves to undo
+    }
+    
+    // Get the last move
+    const lastMove = game.moves.pop(); // Remove the last move from the history
+    game.board = lastMove.previousBoard; // Restore the previous board state
+    game.currentTurn = lastMove.previousTurn; // Revert to the previous player's turn
+    
+    // Optionally, remove any other game state changes related to this move
+    game.inCheck = lastMove.previousInCheck;
+  
+    // Save the updated game state
+    await game.save();
+    
+    return game.getPublicGame(); // Return the updated game state
+  }
+
 }
 
 module.exports = new GameService();

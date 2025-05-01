@@ -48,9 +48,10 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     console.log("Login attempt for:", username);
     console.log("Request body:", req.body);
+    console.log("Password raw received:", JSON.stringify(password)); 
     
     // Find user by username
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username })
     if (!user) {
       console.log(`User "${username}" not found in database`);
       return res.status(400).json({ error: 'Invalid login credentials' });
@@ -65,7 +66,9 @@ router.post('/login', async (req, res) => {
     
     try {
       // Compare password
-      const isMatch = await user.comparePassword(password);
+      //const isMatch = await user.comparePassword(password);
+      const isMatch = await bcrypt.compare(password.trim(), user.password);
+
       console.log(`Password match: ${isMatch}`);
       
       if (!isMatch) {
@@ -250,12 +253,9 @@ router.post('/reset-password/:token', async (req, res) => {
 
     console.log("User found:", user.email);
 
-    // Hash password mới
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
 
     // Update mật khẩu
-    user.password = hashedPassword;
+    user.password = password;
     user.resetToken = undefined;
     user.resetTokenExpiration = undefined;
     await user.save();

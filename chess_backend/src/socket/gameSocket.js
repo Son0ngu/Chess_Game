@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const GameService = require('../services/GameService');
 const logger = require('../utils/logger');
+const Game = require('../models/Game');
 
 /**
  * Set up Socket.IO handlers for chess game communication
@@ -191,7 +192,7 @@ const setupGameSocket = (io) => {
         const result = await GameService.requestUndo(gameId, userId);
         
         // Gửi yêu cầu undo tới đối thủ (sử dụng định dạng room đúng)
-        socket.to(`game:${gameId}`).emit('game:undoRequest', {
+        socket.to(`game:${gameId}`).emit('game:undoRequested', {
           gameId,
           requesterId: userId
         });
@@ -202,12 +203,14 @@ const setupGameSocket = (io) => {
         socket.emit('game:error', { message: error.message });
       }
     });
-
+    
     // Accept undo
     socket.on('game:acceptUndo', async ({ gameId }) => {
       try {
         const userId = socket.user.id;
         const result = await GameService.acceptUndo(gameId, userId);
+
+        console.log(result);
         
         // Gửi trạng thái mới đến cả hai người chơi
         io.to(`game:${gameId}`).emit('game:update', {
@@ -244,7 +247,8 @@ const setupGameSocket = (io) => {
         socket.emit('game:error', { message: error.message });
       }
     });
-    
+  
+   
     // Offer draw
     socket.on('game:offerDraw', ({ gameId }) => {
       socket.to(`game:${gameId}`).emit('game:drawOffer', {
@@ -313,7 +317,41 @@ const setupGameSocket = (io) => {
       // Notify lobby of user count change
       io.to('lobby').emit('lobby:usersCount', await countOnlineUsers());
     });
+  
+    /*
+    socket.on('game:undo', async ({ gameId }) => {
+      try {
+        const game = await Game.findById(gameId);
+        if (!game) return socket.emit('game:error', { message: 'Game not found' });
+    
+        const updatedGame = await GameService.undoMove(game, socket.user.id);
+        if (!updatedGame) {
+          return socket.emit('game:error', { message: 'Undo failed' });
+        }
+    
+        // Emit updated game state to both players in the room
+        io.to(`game:${gameId}`).emit('game:update', {
+          board: getBoardFromFEN(updatedGame.fen),
+          position: updatedGame.fen,
+          currentTurn: updatedGame.currentTurn,
+          legalMoves: updatedGame.legalMoves,
+          inCheck: updatedGame.inCheck,
+          history: updatedGame.moves
+        });
+    
+        // Optional: emit a confirmation
+        io.to(`game:${gameId}`).emit('game:undoConfirmed', {
+          message: `${socket.user.username} undid the last move`
+        });
+    
+        logger.info(`${socket.user.username} undid move in game ${gameId}`);
+      } catch (err) {
+        logger.error(`Undo error: ${err.message}`);
+        socket.emit('game:error', { message: 'Server error on undo' });
+      }
   });
+  */
+});
 
   // Helper function to count online users
   async function countOnlineUsers() {
@@ -367,6 +405,7 @@ const setupGameSocket = (io) => {
       san: move.san
     }));
   }
+
 };
 
 module.exports = setupGameSocket;
