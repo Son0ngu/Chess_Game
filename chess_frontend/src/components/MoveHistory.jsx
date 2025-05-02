@@ -36,18 +36,34 @@ const MoveHistory = ({ moves = [], playerColor = 'white' }) => {
   };
 
 // Group moves by pairs (white and black), handling black as first player
-const groupMovesInPairs = (moves) => {
+const groupMovesInPairs = (moves, playerColor) => {
   const pairs = [];
-  for (let i = 0; i < moves.length; i += 2) {
-    pairs.push({
-      white: moves[i] || null,
-      black: moves[i + 1] || null,
-    });
+  let i = 0;
+
+  if (playerColor === 'black') {
+    // Black starts: first move is black, white is null
+    pairs.push({ white: null, black: moves[0] || null });
+    i = 1;
+    // Now pair up the rest as (white, black)
+    for (; i < moves.length; i += 2) {
+      pairs.push({
+        white: moves[i] || null,
+        black: moves[i + 1] || null,
+      });
+    }
+  } else {
+    // White starts: pair as (white, black)
+    for (; i < moves.length; i += 2) {
+      pairs.push({
+        white: moves[i] || null,
+        black: moves[i + 1] || null,
+      });
+    }
   }
   return pairs;
 };
 
-const movePairs = groupMovesInPairs(moves);
+const movePairs = groupMovesInPairs(moves, playerColor);
 
   return (
     <div className="move-history">
