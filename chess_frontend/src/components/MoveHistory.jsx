@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '../styles/MoveHistory.css';
 
 const MoveHistory = ({ moves = [], playerColor = 'white' }) => {
+  // Debug log - check what data is coming in
+  useEffect(() => {
+    console.log('Moves data:', moves);
+  }, [moves]);
+
   // Format move for display (e.g., "e2-e4", "Nf3", "O-O")
   const formatMove = (move) => {
     if (!move) return '';
@@ -35,35 +40,32 @@ const MoveHistory = ({ moves = [], playerColor = 'white' }) => {
     return symbols[piece] || '';
   };
 
-// Group moves by pairs (white and black), handling black as first player
-const groupMovesInPairs = (moves, playerColor) => {
-  const pairs = [];
-  let i = 0;
-
-  if (playerColor === 'black') {
-    // Black starts: first move is black, white is null
-    pairs.push({ white: null, black: moves[0] || null });
-    i = 1;
-    // Now pair up the rest as (white, black)
-    for (; i < moves.length; i += 2) {
-      pairs.push({
-        white: moves[i] || null,
-        black: moves[i + 1] || null,
-      });
+  // Group moves by pairs based on actual game sequence
+  const groupMovesInPairs = (moves) => {
+    if (!moves || moves.length === 0) return [];
+    
+    const pairs = [];
+    
+    // Handle moves that may not have explicit color info
+    // In chess, odd-indexed moves are black, even-indexed are white
+    const processedMoves = moves.map((move, index) => {
+      // If move already has color, use it; otherwise infer from position
+      const color = move.color || (index % 2 === 0 ? 'white' : 'black');
+      return { ...move, color };
+    });
+    
+    // Group by pairs (white, black)
+    for (let i = 0; i < processedMoves.length; i += 2) {
+      const white = processedMoves[i] || null;
+      const black = processedMoves[i+1] || null;
+      pairs.push({ white, black });
     }
-  } else {
-    // White starts: pair as (white, black)
-    for (; i < moves.length; i += 2) {
-      pairs.push({
-        white: moves[i] || null,
-        black: moves[i + 1] || null,
-      });
-    }
-  }
-  return pairs;
-};
+    
+    return pairs;
+  };
 
-const movePairs = groupMovesInPairs(moves, playerColor);
+  // Get move pairs
+  const movePairs = groupMovesInPairs(moves);
 
   return (
     <div className="move-history">
