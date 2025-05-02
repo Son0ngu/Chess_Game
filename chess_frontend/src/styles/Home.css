@@ -359,6 +359,33 @@ body::before {
   text-decoration: underline;
 }
 
+.recover-password-link,
+.recover-password-link:link,
+.recover-password-link:visited,
+.recover-password-link:active {
+  color: var(--accent-color) !important;
+  background: transparent;
+  border: 2px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  margin-right: 24px;
+  transition: 
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+  display: inline-block;
+}
+
+.recover-password-link:hover {
+  background: var(--accent-color) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(147, 112, 219, 0.15);
+  text-decoration: none !important;
+}
+
 /* Footer styling */
 .home-footer {
   border-top: 1px solid var(--border-color, #333);
@@ -431,4 +458,8 @@ button {
   .stat-number {
     font-size: 2.5rem;
   }
+
+
+
+  
 }

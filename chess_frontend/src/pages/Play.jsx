@@ -164,7 +164,7 @@ const Play = () => {
         {opponent && (
           <div className="opponent-info">
             <h3>{opponent.username}</h3>
-            <div className="rating">Rating: {opponent.elo}</div>
+            
           </div>
         )}
         
@@ -218,7 +218,7 @@ const Play = () => {
 
       <div className="game-sidebar">
         <div className="move-history-container">
-          <MoveHistory moves={moves} />
+        <MoveHistory moves={moves}  />
         </div>
         
         <div className="game-controls-container">
@@ -233,8 +233,6 @@ const Play = () => {
 
         <div className="player-info">
           <h3>You ({playerColor})</h3>
-          <div className="rating">Rating: {user.elo}</div>
-        </div>
       </div>
 
       {showResignDialog && (
@@ -317,6 +315,7 @@ const Play = () => {
         </div>
       )}
     </div>
+  </div>
   );
 };
 

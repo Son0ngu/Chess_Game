@@ -1,7 +1,7 @@
 import React from 'react';
 import '../styles/MoveHistory.css';
 
-const MoveHistory = ({ moves = [] }) => {
+const MoveHistory = ({ moves = [], playerColor = 'white' }) => {
   // Format move for display (e.g., "e2-e4", "Nf3", "O-O")
   const formatMove = (move) => {
     if (!move) return '';
@@ -35,26 +35,19 @@ const MoveHistory = ({ moves = [] }) => {
     return symbols[piece] || '';
   };
 
-  // Group moves by pairs (white and black)
-  const groupMovesInPairs = (moves) => {
-    return moves.reduce((pairs, move, index) => {
-      const pairIndex = Math.floor(index / 2);
-      
-      if (!pairs[pairIndex]) {
-        pairs[pairIndex] = { white: null, black: null };
-      }
-      
-      if (index % 2 === 0) {
-        pairs[pairIndex].white = move;
-      } else {
-        pairs[pairIndex].black = move;
-      }
-      
-      return pairs;
-    }, []);
-  };
+// Group moves by pairs (white and black), handling black as first player
+const groupMovesInPairs = (moves) => {
+  const pairs = [];
+  for (let i = 0; i < moves.length; i += 2) {
+    pairs.push({
+      white: moves[i] || null,
+      black: moves[i + 1] || null,
+    });
+  }
+  return pairs;
+};
 
-  const movePairs = groupMovesInPairs(moves);
+const movePairs = groupMovesInPairs(moves);
 
   return (
     <div className="move-history">

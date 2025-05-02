@@ -27,7 +27,7 @@ const registerUser = async (req, res) => {
       username,
       email,
       password, // Just use the plain password here - it will be hashed by the pre-save middleware
-      elo: 1200, // default rating
+      //elo: 1200, // default rating
     });
 
     await user.save();
@@ -112,7 +112,7 @@ const getUserProfile = async (req, res) => {
 };
 
 // Get player rankings
-const getPlayerRankings = async (req, res) => {
+/*const getPlayerRankings = async (req, res) => {
   try {
     // Get all users with ELO ratings, sort by highest ELO
     const players = await User.find({}, 'username elo gamesPlayed gamesWon')
@@ -134,7 +134,7 @@ const getPlayerRankings = async (req, res) => {
     console.error('Error retrieving player rankings:', err);
     res.status(500).json({ error: 'Failed to retrieve rankings' });
   }
-};
+};*/
 
 // Get active users for matchmaking
 const getActiveUsers = async (req, res) => {

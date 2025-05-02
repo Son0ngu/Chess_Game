@@ -5,6 +5,7 @@ const GameControls = ({
   canResign,
   canOfferDraw,
   onResign, 
+  onNewGame,
   onOfferDraw,
   gameOver
 }) => {
@@ -12,12 +13,7 @@ const GameControls = ({
     <div className="game-controls">
       <h3>Game Controls</h3>
       <div className="controls-grid">
-        <button 
-          className="control-btn new-game-btn"
-          onClick={onNewGame}
-        >
-          New Game
-        </button>
+        
         <button 
           className="control-btn resign-btn"
           onClick={onResign}

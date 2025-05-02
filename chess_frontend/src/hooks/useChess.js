@@ -100,12 +100,6 @@ const useChess = (gameId) => {
       socket.emit('game:leave', { gameId });
     };
   }, [gameId, user]);
-<<<<<<< HEAD
-
-
-  
-=======
->>>>>>> 271741699c8679088a7bd9e33f5734f4a261d0d5
   
   // Handle piece selection and move highlighting
   const selectPiece = useCallback((piece, position) => {

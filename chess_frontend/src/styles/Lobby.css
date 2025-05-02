@@ -72,6 +72,50 @@
   animation: pulse 1.5s infinite;
 }
 
+.home-btn {
+  background-color: #9370DB;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  margin-right: 24px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(147, 112, 219, 0.08);
+}
+
+.home-btn:hover {
+  background: #7d5ec2;
+  color: #fff;
+  text-decoration: none;
+}
+
+.fixed-home-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  background-color: #3c08a4;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(147, 112, 219, 0.08);
+}
+
+.fixed-home-btn:hover {
+  background: #7d5ec2;
+  color: #fff;
+  text-decoration: none;
+}
+
 @keyframes pulse {
   0% {
     opacity: 0.5;

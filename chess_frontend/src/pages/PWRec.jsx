@@ -1,13 +1,11 @@
-// src/pages/PasswordRecovery.jsx
 import React, { useState } from "react";
-import { Link } from "react-router-dom"; // Removed 'useNavigate' as it's not being used
+import { Link } from "react-router-dom";
 import axios from "axios";
-import "../styles/Signin.css"; // Tận dụng luôn CSS từ SignIn
+import "../styles/Signin.css";
 
-const API_URL = "http://localhost:5000"; // Đổi nếu cần
+const API_URL = "http://localhost:5000";
 
 const PWRec = () => {
-  // Removed 'navigate' as it's not being used
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -31,9 +29,7 @@ const PWRec = () => {
     setServerMessage({ type: "", text: "" });
 
     try {
-      console.log("Sending password recovery request with:", email);
       const response = await axios.post(`${API_URL}/auth/recover`, { email });
-      console.log("Recovery response received:", response.data);
 
       if (response.data && response.data.message) {
         setServerMessage({ 
@@ -44,7 +40,6 @@ const PWRec = () => {
         throw new Error("Invalid response format");
       }
     } catch (error) {
-      console.error("Recovery error:", error);
       const errorMessage = error.response?.data?.error || "Recovery failed. Please try again.";
       setServerMessage({ 
         type: "error", 
@@ -56,9 +51,9 @@ const PWRec = () => {
   };
 
   return (
-    <div className="signin-container">
+    <div className="pwrec-container">
       <h2>Password Recovery</h2>
-      <form onSubmit={handleSubmit}>
+      <form className="pwrec-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="email">Email:</label>
           <input
@@ -67,6 +62,7 @@ const PWRec = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoFocus
           />
           {errors.email && <span className="error">{errors.email}</span>}
         </div>

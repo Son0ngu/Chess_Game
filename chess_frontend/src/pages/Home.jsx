@@ -30,7 +30,7 @@ const Home = () => {
             </>
           ) : (
             <>
-              <Link to="/pwrecovery" className="pw-recovery">Recover Password</Link>
+              <Link to="/pwrecovery" className="recover-password-link">Recover Password</Link>
               <Link to="/signin" className="sign-in">Sign In</Link>
               <Link to="/signup" className="sign-up">Sign Up</Link>
             </>

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/Lobby.css";
 import Spinner from "../components/Spinner";
 import { socket } from "../services/socket";
+import { Link } from "react-router-dom";
 
 const Lobby = () => {
   const navigate = useNavigate();
@@ -89,6 +90,8 @@ const Lobby = () => {
   }
 
   return (
+    <>
+    <Link to="/" className="home-btn fixed-home-btn">Home</Link>
     <div className="lobby-container">
       <div className="lobby-header">
         <div className="header-title-box">
@@ -104,6 +107,7 @@ const Lobby = () => {
             <div className="dot"></div>
             <span>Online: {onlineUsers}</span>
           </div>
+          
         </div>
       </div>
 
@@ -141,7 +145,7 @@ const Lobby = () => {
               {activePlayers.map(player => (
                 <li key={player.id} className="player-item">
                   <span className="player-name">{player.username}</span>
-                  <span className="player-rating">Rating: {player.rating}</span>
+                 
                 </li>
               ))}
             </ul>
@@ -151,6 +155,7 @@ const Lobby = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

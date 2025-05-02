@@ -88,6 +88,11 @@
   background-color: #f57c00;
 }
 
+.controls-grid {
+  display: flex;
+  gap: 16px; /* Adjust the spacing as needed */
+}
+
 @media (max-width: 768px) {
   .game-controls {
     padding: 12px;
