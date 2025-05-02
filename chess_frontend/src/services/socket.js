@@ -28,14 +28,7 @@ export const disconnectSocket = () => {
 // Listen for connection/errors
 socket.on('connect', () => {
   console.log('Socket connected');
-<<<<<<< HEAD
-
-
-=======
-  // Removed the incorrect piece reference that was causing the error
->>>>>>> 271741699c8679088a7bd9e33f5734f4a261d0d5
 });
-
 socket.on('connect_error', (error) => {
   console.error('Socket connection error:', error.message);
   
