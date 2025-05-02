@@ -332,10 +332,7 @@ class GameService {
     
     return history.length - 1; // Trả về chỉ số của trạng thái hiện tại
   }
-
-  /**
-   * Xử lý yêu cầu undo nước đi
-   */
+  /*
   async requestUndo(gameId, requesterId) {
     try {
       const game = this.activeGames.get(gameId);
@@ -379,9 +376,7 @@ class GameService {
     }
   }
 
-  /**
-   * Xử lý chấp nhận yêu cầu undo
-   */
+  
   async acceptUndo(gameId, accepterId) {
     try {
       const game = this.activeGames.get(gameId);
@@ -444,9 +439,7 @@ class GameService {
     }
   }
 
-  /**
-   * Xử lý từ chối yêu cầu undo
-   */
+  
   declineUndo(gameId, declinerId) {
     try {
       const game = this.activeGames.get(gameId);
@@ -480,6 +473,7 @@ class GameService {
       throw error;
     }
   }
+  */
 
   /**
    * Get the current status of a chess game

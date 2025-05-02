@@ -17,20 +17,6 @@ const GameControls = ({
       <h3>Game Controls</h3>
       <div className="controls-grid">
         <button 
-          className="control-btn undo-btn"
-          onClick={onUndoRequest}
-          disabled={!canUndo}
-        >
-          Undo Move
-        </button>
-        <button 
-          className="control-btn redo-btn"
-          onClick={onRedoRequest}
-          disabled={!canRedo}
-        >
-          Redo Move
-        </button>
-        <button 
           className="control-btn new-game-btn"
           onClick={onNewGame}
         >

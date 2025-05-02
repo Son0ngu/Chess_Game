@@ -108,19 +108,7 @@ const useChess = (gameId) => {
     };
   }, [gameId, user]);
 
-  socket.on('game:undoDeclined', ({ by }) => {
-    alert(`${by} đã từ chối yêu cầu undo.`);
-  });
-  
-  socket.on('game:undoConfirmed', ({ by }) => {
-    if (from === currentUsername) return; // Bỏ qua nếu là mình gửi
 
-  const accept = window.confirm(`${from} muốn undo. Bạn có đồng ý không?`);
-  socket.emit('game:undoResponse', {
-    gameId,
-    accepted: accept
-  });
-  });
   
   
   // Handle piece selection and move highlighting

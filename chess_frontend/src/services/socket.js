@@ -28,7 +28,7 @@ export const disconnectSocket = () => {
 // Listen for connection/errors
 socket.on('connect', () => {
   console.log('Socket connected');
-  console.log(`/assets/${piece.type.toLowerCase()}_${piece.color === 'white' ? 'w' : 'b'}.png`);
+
 
 });
 
