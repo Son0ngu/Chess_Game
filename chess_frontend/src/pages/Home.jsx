@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Home.css";
-import heroImage from "../components/son.jpg";
+import heroImage from "../components/thisIsVanh.jpg";
 
 const Home = () => {
   const navigate = useNavigate();

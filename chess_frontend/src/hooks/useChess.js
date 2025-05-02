@@ -24,6 +24,10 @@ const useChess = (gameId) => {
     result: null
   });
   
+  // Promotion state
+  const [showPromotion, setShowPromotion] = useState(false);
+  const [pendingPromotion, setPendingPromotion] = useState(null);
+  
   // Initialize game when component mounts
   useEffect(() => {
     if (!gameId) return;
@@ -118,15 +122,66 @@ const useChess = (gameId) => {
       return false;
     }
     
-    // Send move to server
+    // Check if this is a pawn promotion move
+    const isPawnPromotion = () => {
+      // Get rank and file from algebraic notation
+      const fromFile = from.charAt(0);
+      const fromRank = parseInt(from.charAt(1));
+      const toRank = parseInt(to.charAt(1));
+      
+      // Find the piece at the starting position
+      const row = 8 - fromRank; // Convert chess rank (1-8) to array index (7-0)
+      const col = fromFile.charCodeAt(0) - 'a'.charCodeAt(0); // Convert file (a-h) to index (0-7)
+      
+      // Get the piece from the board
+      const piece = board[row][col];
+      
+      // Check if it's a pawn (type 'p') moving to the last rank
+      return piece && 
+             piece.type === 'p' &&
+             ((piece.color === 'white' && toRank === 8) || 
+              (piece.color === 'black' && toRank === 1));
+    };
+    
+    // If it's a promotion, store the pending move and show dialog
+    if (isPawnPromotion()) {
+      setPendingPromotion({ from, to });
+      setShowPromotion(true);
+      return true;
+    } else {
+      // Regular move
+      socket.emit('game:move', {
+        gameId,
+        from,
+        to
+      });
+      return true;
+    }
+  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver, board]);
+  
+  // Complete promotion with selected piece
+  const completePromotion = useCallback((promotionPiece) => {
+    if (!pendingPromotion) return;
+    
     socket.emit('game:move', {
       gameId,
-      from,
-      to
+      from: pendingPromotion.from,
+      to: pendingPromotion.to,
+      promotion: promotionPiece // 'q', 'r', 'b', or 'n'
     });
     
-    return true;
-  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
+    console.log(`Sending promotion move: ${pendingPromotion.from} to ${pendingPromotion.to} with promotion to ${promotionPiece}`);
+    
+    // Reset promotion state
+    setShowPromotion(false);
+    setPendingPromotion(null);
+  }, [gameId, pendingPromotion]);
+  
+  // Cancel promotion
+  const cancelPromotion = useCallback(() => {
+    setShowPromotion(false);
+    setPendingPromotion(null);
+  }, []);
   
   // Reset game
   const reset = useCallback(() => {
@@ -145,7 +200,11 @@ const useChess = (gameId) => {
     gameStatus,
     selectPiece,
     makeMove,
-    reset
+    reset,
+    // New promotion-related values
+    showPromotion,
+    completePromotion,
+    cancelPromotion
   };
 };
 

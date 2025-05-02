@@ -32,7 +32,9 @@ const Play = () => {
     position,
     inCheck,
     possibleMoves,
-    gameStatus
+    gameStatus,
+    showPromotion,
+    completePromotion
   } = useChess(gameId);
   
   useEffect(() => {
@@ -309,6 +311,41 @@ const Play = () => {
             <div className="dialog-buttons">
               <button onClick={handleBackToLobby} className="confirm-btn">
                 Back to Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promotion selection dialog */}
+      {showPromotion && (
+        <div className="dialog-overlay">
+          <div className="dialog promotion-dialog">
+            <h3>Choose Promotion Piece</h3>
+            <div className="promotion-options">
+              <button 
+                onClick={() => completePromotion('q')} 
+                className="promotion-btn"
+              >
+                Queen
+              </button>
+              <button 
+                onClick={() => completePromotion('r')} 
+                className="promotion-btn"
+              >
+                Rook
+              </button>
+              <button 
+                onClick={() => completePromotion('b')} 
+                className="promotion-btn"
+              >
+                Bishop
+              </button>
+              <button 
+                onClick={() => completePromotion('n')} 
+                className="promotion-btn"
+              >
+                Knight
               </button>
             </div>
           </div>
