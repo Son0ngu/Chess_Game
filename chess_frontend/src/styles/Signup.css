@@ -1,183 +1,196 @@
-.auth-container {
+.signup-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 60px);
-  background-color: #121212;
-  padding: 1.5rem;
-  box-sizing: border-box;
+  min-height: 80vh;
+  padding: 20px;
+  background-color: white; /* Added white background to match Signin */
 }
 
-.auth-form-container {
-  background: #1e1e1e;
-  padding: 2rem;
+.signup-card {
+  background-color: white;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 400px;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  max-width: 400px; /* Changed from 450px to 400px to match Signin */
+  padding: 30px;
 }
 
-/* Subtle hover effect for the form container */
-.auth-form-container:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-  transform: translateY(-2px);
-}
-
-.auth-form-container h2 {
+.signup-header {
   text-align: center;
-  margin-bottom: 1.5rem;
-  color: #ffffff;
-  font-size: 1.75rem;
+  margin-bottom: 30px;
 }
 
-.auth-form {
+.signup-title {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.signup-subtitle {
+  color: #666;
+  font-size: 1rem;
+}
+
+.signup-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 20px; /* Changed from 15px to 20px to match Signin */
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0.5rem;
+  gap: 8px; /* Changed from 6px to 8px to match Signin */
 }
 
 .form-group label {
-  margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #b0b0b0;
-  font-size: 0.95rem;
+  color: #555;
+  font-size: 0.9rem;
 }
 
-.form-group input {
-  padding: 0.75rem;
-  border: 1px solid #333;
+.form-control {
+  padding: 12px 16px;
+  border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  background-color: #2d2d2d;
-  color: #e0e0e0;
+  transition: border-color 0.2s;
 }
 
-/* Improved focus state for better accessibility */
-.form-group input:focus {
+.form-control:focus {
   outline: none;
-  border-color: #4d4dff;
-  box-shadow: 0 0 0 3px rgba(77, 77, 255, 0.2);
-  background-color: #333333;
+  border-color: #3f51b5;
+  box-shadow: 0 0 0 1px rgba(63, 81, 181, 0.3);
 }
 
-/* Invalid input styling */
-.form-group input.invalid {
-  border-color: #e53935;
-  background-color: #3d2525;
+.form-error {
+  color: #f44336;
+  font-size: 0.85rem;
+  margin-top: 4px;
 }
 
-.error {
-  color: #ff7070;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  display: block;
-  font-weight: 500;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.auth-button {
-  background-color: #4d4dff;
+.signup-button {
+  background-color: #3f51b5;
   color: white;
-  padding: 0.85rem;
   border: none;
   border-radius: 4px;
+  padding: 12px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 1rem;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s;
+  margin-top: 10px;
 }
 
-.auth-button:hover:not(:disabled) {
-  background-color: #3a3ad1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+.signup-button:hover {
+  background-color: #303f9f;
 }
 
-.auth-button:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-.auth-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(77, 77, 255, 0.3);
-}
-
-.auth-button:disabled {
-  background-color: #3a3a3a;
+.signup-button:disabled {
+  background-color: #bdbdbd;
   cursor: not-allowed;
-  opacity: 0.7;
-  box-shadow: none;
 }
 
-.auth-redirect {
+.signup-options {
+  margin-top: 20px;
   text-align: center;
-  margin-top: 1.5rem;
-  color: #a0a0a0;
-  font-size: 0.95rem;
+  color: #555;
+  font-size: 0.9rem;
 }
 
-/* Auth link styling */
-.auth-link, 
-.auth-redirect a {
-  color: #7b7bff;
+.signup-options a {
+  color: #3f51b5;
   text-decoration: none;
-  cursor: pointer;
   font-weight: 500;
-  margin-left: 0.25rem;
-  transition: color 0.2s;
 }
 
-.auth-link:hover,
-.auth-redirect a:hover {
+.signup-options a:hover {
   text-decoration: underline;
-  color: #9f9fff;
 }
 
-.auth-link:focus,
-.auth-redirect a:focus {
-  outline: none;
-  text-decoration: underline;
-  color: #9f9fff;
+.password-strength {
+  margin-top: 4px;
+  font-size: 0.85rem;
 }
 
-.message {
-  padding: 0.85rem;
+.strength-weak {
+  color: #f44336;
+}
+
+.strength-medium {
+  color: #ff9800;
+}
+
+.strength-strong {
+  color: #4caf50;
+}
+
+.terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.terms input {
+  margin-top: 4px;
+}
+
+.terms label {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.auth-error {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 12px;
   border-radius: 4px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  font-weight: 500;
-  animation: slideDown 0.3s ease;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.auth-error svg {
+  flex-shrink: 0;
 }
 
-.message.success {
-  background-color: rgba(46, 125, 50, 0.2);
-  color: #81c784;
-  border: 1px solid #2e7d32;
+.form-row {
+  display: flex;
+  gap: 15px;
 }
 
-.message.error {
-  background-color: rgba(198, 40, 40, 0.2);
-  color: #ef9a9a;
-  border: 1px solid #c62828;
+.form-row .form-group {
+  flex: 1;
+}
+
+@media (max-width: 500px) {
+  .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+
+/* Đảm bảo các input có nền trắng */
+.signup-container .form-control {
+  background-color: white !important;
+  color: #333 !important;
+  border: 1px solid #ddd !important;
+}
+
+/* Đảm bảo các button có màu đúng */
+.signup-container .signup-button {
+  background-color: #3f51b5 !important;
+  color: white !important;
+}
+
+.signup-container .signup-button:hover {
+  background-color: #303f9f !important;
+}
+
+.signup-container .signup-button:disabled {
+  background-color: #bdbdbd !important;
 }

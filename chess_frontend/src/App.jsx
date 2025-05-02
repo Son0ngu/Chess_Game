@@ -1,80 +1,95 @@
-import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import "./App.css";
-import { gameSubject, initGame, resetGame, undo, redo } from "./components/Game";
-import Board from "./components/Board";
-import MoveHistory from "./components/MoveHistory";
-import Home from "./pages/Home"; // Import Home component
-import Signup from "./pages/SignUp";
-import Signin from "./pages/SignIn";
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import Home from './pages/Home';
+import Lobby from './pages/Lobby';
+import Play from './pages/Play';
+import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
+import PWRec from './pages/PWRec';
+import ResetPassword from './pages/ResetPW';
+import Spinner from './components/Spinner';
+import { connectSocket, disconnectSocket } from './services/socket';
+import './styles/App.css';
 
-function GamePage() {
-  const [board, setBoard] = useState([]);
-  const [isGameOver, setIsGameOver] = useState(false);
-  const [result, setResult] = useState(null);
-  const [turn, setTurn] = useState("w");
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  const [moveNotation, setMoveNotation] = useState([]);
-
-  useEffect(() => {
-    initGame();
-    const subscription = gameSubject.subscribe((game) => {
-      setBoard(game.board || []);
-      setIsGameOver(game.isGameOver || false);
-      setResult(game.result || null);
-      setTurn(game.turn || "w");
-      setCanUndo(game.canUndo || false);
-      setCanRedo(game.canRedo || false);
-      setMoveNotation(game.moveNotation || []);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  return (
-    <div className="container">
-      <div className="game-controls vertical-text">
-        <button onClick={undo} disabled={!canUndo || isGameOver}>
-          <span className="vertical-text">UNDO</span>
-        </button>
-        <button onClick={redo} disabled={!canRedo || isGameOver}>
-          <span className="vertical-text">REDO</span>
-        </button>
-        <button onClick={resetGame}>
-          <span className="vertical-text">NEW GAME</span>
-        </button>
-      </div>
-
-      <div className="board-container">
-        <Board board={board} turn={turn} />
-        {isGameOver && (
-          <div className="game-over">
-            <h2>GAME OVER</h2>
-            {result && <p>{result}</p>}
-          </div>
-        )}
-      </div>
-
-      <MoveHistory moveNotation={moveNotation} />
-    </div>
-  );
-}
+// Protected route component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <Spinner />;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" replace />;
+  }
+  
+  return children;
+};
 
 const App = () => {
+  const { isAuthenticated } = useAuth();
+  
+  // Connect to socket.io when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      connectSocket();
+    } else {
+      disconnectSocket();
+    }
+    
+    return () => {
+      disconnectSocket();
+    };
+  }, [isAuthenticated]);
+  
   return (
-    <Router>
-      <nav>
-        <Link to="/">Home</Link> | <Link to="/signup">Sign Up</Link> | <Link to="/signin">Sign In</Link>
-      </nav>
-
+    <div className="app">
       <Routes>
+        {/* Public routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/signin" element={<Signin />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/play" element={<GamePage />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/pwrecovery" element={<PWRec />} />
+        {/* Protected routes */}
+        <Route 
+          path="/lobby" 
+          element={
+            <ProtectedRoute>
+              <Lobby />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/play" 
+          element={
+            <ProtectedRoute>
+              <Play />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/play/:gameId" 
+          element={
+            <ProtectedRoute>
+              <Play />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/reset-password/:token" 
+          element={
+                <ResetPassword />
+          }
+        />
+
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+    </div>
   );
 };
 

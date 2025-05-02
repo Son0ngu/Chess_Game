@@ -1,0 +1,85 @@
+.move-history {
+  background-color: #262421; /* Đổi màu nền để phù hợp với bàn cờ */
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  width: 100%;
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 10px 0; /* Thêm margin trên và dưới */
+  transition: all 0.3s ease; /* Hiệu ứng hover mượt mà */
+  color: white; /* Đổi màu chữ thành trắng */
+}
+
+.move-history:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.move-history h3 {
+  margin-bottom: 12px;
+  color: white; /* Đổi màu tiêu đề */
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
+}
+
+.move-list {
+  width: 100%;
+}
+
+.move-list table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.move-list th {
+  text-align: left;
+  padding: 8px;
+  background-color: #333;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.move-list td {
+  padding: 8px;
+  border-bottom: 1px solid #444;
+}
+
+.move-number {
+  width: 30px;
+  color: #888;
+  text-align: center;
+}
+
+.move {
+  font-weight: 500;
+}
+
+.white-move {
+  color: #f0f0f0; /* Màu sáng hơn cho nước đi trắng */
+}
+
+.black-move {
+  color: #aaa; /* Màu tối hơn cho nước đi đen */
+}
+
+.move-list tr:nth-child(even) {
+  background-color: #333;
+}
+
+.move-list tr:hover {
+  background-color: #444;
+}
+
+@media (max-width: 768px) {
+  .move-history {
+    padding: 12px;
+    max-height: 200px;
+  }
+  
+  .move-list td, .move-list th {
+    padding: 6px;
+    font-size: 14px;
+  }
+}

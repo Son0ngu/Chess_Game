@@ -1,14 +1,15 @@
 // src/pages/SignIn.jsx
-import React, { useState } from "react";
+import React, { useState } from "react"; // Remove useContext from import
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios"; // Add axios for API calls
+import axios from "axios";
+import { useAuth } from "../context/AuthContext"; // Make sure to import your auth context
 import "../styles/Signin.css";
 
-// API base URL - match your backend port
-const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:5000";
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const { login } = useAuth(); // Get the login function from your auth context
   const [formData, setFormData] = useState({
     username: "",
     password: ""
@@ -21,7 +22,6 @@ const SignIn = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     
-    // Clear error when user starts typing in a field
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
@@ -30,12 +30,10 @@ const SignIn = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    // Username validation
     if (!formData.username.trim()) {
       newErrors.username = "Username is required";
     }
     
-    // Password validation
     if (!formData.password) {
       newErrors.password = "Password is required";
     }
@@ -53,31 +51,38 @@ const SignIn = () => {
     setServerMessage({ type: "", text: "" });
     
     try {
-      // Call the login API endpoint - use the correct endpoint (/api/users/login)
-      const response = await axios.post(`${API_URL}/users/login`, formData);
+      console.log("Sending login request with:", formData);
+      const response = await axios.post(`${API_URL}/auth/login`, formData);
+      console.log("Login response received:", response.data); // Add this to debug
       
       // Handle successful login
       if (response.data && response.data.token) {
-        // Store user data in localStorage
-        localStorage.setItem("chessUser", JSON.stringify({
-          username: formData.username,
-          token: response.data.token,
-          id: response.data.user.id,
+        // Create user object
+        const userData = {
+          id: response.data.user.id || response.data.user._id, // Handle both id formats
+          username: response.data.user.username,
+          email: response.data.user.email,
           elo: response.data.user.elo
-        }));
+        };
+        
+        console.log("User data for context:", userData);
+        
+        // Update auth context - directly pass the response data
+        login(response.data);
         
         setServerMessage({ 
           type: "success", 
-          text: "Login successful! Redirecting..." 
+          text: "Login successful! Redirecting to lobby..." 
         });
         
-        // Redirect to game page after short delay
-        setTimeout(() => {
-          navigate("/play");
-        }, 1500);
+        // Navigate to lobby
+        navigate("/lobby");
+      } else {
+        throw new Error("Invalid response format");
       }
     } catch (error) {
-      // Handle error
+      console.error("Login error:", error);
+      
       const errorMessage = error.response?.data?.error || "Login failed. Please try again.";
       setServerMessage({ 
         type: "error", 
@@ -89,39 +94,33 @@ const SignIn = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-form-container">
-        <h2>Sign In</h2>
+    <div className="signin-container">
+      <div className="signin-card">
+        <div className="signin-header">
+          <h2 className="signin-title">Sign In</h2>
+          <p className="signin-subtitle">Enter your credentials to access your account</p>
+        </div>
         
         {serverMessage.text && (
-          <div 
-            className={`message ${serverMessage.type}`}
-            role="alert"
-            aria-live="assertive"
-          >
+          <div className={`auth-${serverMessage.type}`}>
             {serverMessage.text}
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="auth-form" noValidate>
+        <form className="signin-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
               type="text"
               id="username"
               name="username"
+              className="form-control"
               value={formData.username}
               onChange={handleChange}
+              placeholder="Enter your username"
               disabled={isLoading}
-              aria-invalid={!!errors.username}
-              aria-describedby={errors.username ? "username-error" : undefined}
-              autoComplete="username"
             />
-            {errors.username && (
-              <span className="error" id="username-error">
-                {errors.username}
-              </span>
-            )}
+            {errors.username && <div className="form-error">{errors.username}</div>}
           </div>
           
           <div className="form-group">
@@ -130,38 +129,27 @@ const SignIn = () => {
               type="password"
               id="password"
               name="password"
+              className="form-control"
               value={formData.password}
               onChange={handleChange}
+              placeholder="Enter your password"
               disabled={isLoading}
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? "password-error" : undefined}
-              autoComplete="current-password"
             />
-            {errors.password && (
-              <span className="error" id="password-error">
-                {errors.password}
-              </span>
-            )}
+            {errors.password && <div className="form-error">{errors.password}</div>}
           </div>
           
           <button 
             type="submit" 
-            className="auth-button" 
+            className="signin-button"
             disabled={isLoading}
           >
             {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
         
-        <p className="auth-redirect">
-          Don't have an account?{" "}
-          <Link 
-            to="/signup" 
-            className="auth-link"
-          >
-            Sign Up
-          </Link>
-        </p>
+        <div className="signin-options">
+          Don't have an account? <Link to="/signup">Sign Up</Link>
+        </div>
       </div>
     </div>
   );

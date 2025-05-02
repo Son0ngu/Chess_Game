@@ -1,40 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import Square from './Square';
-import Piece from './Piece';
-import { useDrop } from 'react-dnd';
-import { handleMove, gameSubject } from './Game';
-import Promote from './Promote';
+import React from 'react';
 
-export default function BoardSquare({ piece, black, position }) {
-  const [promotion, setPromotion] = useState(null);
-
-  const [, drop] = useDrop({
-    accept: 'piece',
-    drop: (item) => {
-      const [fromPosition] = item.id.split('_');
-      console.log(`Dropped piece from ${fromPosition} to ${position}`);
-      handleMove(fromPosition, position);
-    },
-  });
-
-  useEffect(() => {
-    const subscription = gameSubject.subscribe(({ pendingPromotion }) =>
-      pendingPromotion && pendingPromotion.to === position
-        ? setPromotion(pendingPromotion)
-        : setPromotion(null)
-    );
-    return () => subscription.unsubscribe();
-  }, [position]);
+export default function BoardSquare({ 
+  piece, 
+  black, 
+  position,
+  isPossibleMove = false,
+  isSelected = false,
+  isCheck = false
+}) {
+  // Xác định các class tùy thuộc vào trạng thái
+  const squareClass = [
+    black ? 'square-black' : 'square-white',
+    isPossibleMove ? 'possible-move' : '',
+    isSelected ? 'selected' : '',
+    isCheck ? 'in-check' : ''
+  ].filter(Boolean).join(' ');
 
   return (
-    <div className="board-square" ref={drop}>
-      <Square black={black}>
-        {promotion ? (
-          <Promote promotion={promotion} />
-        ) : piece ? (
-          <Piece piece={piece} position={position} />
-        ) : null}
-      </Square>
+    <div className={`board-square ${squareClass}`}>
+      {piece && (
+        <div className="piece-container">
+          <img 
+            src={`/assets/${piece.type.toLowerCase()}_${piece.color === 'white' ? 'w' : 'b'}.png`}
+            alt={`${piece.color} ${piece.type}`} 
+            className="piece" 
+          />
+        </div>
+      )}
+      {isPossibleMove && !piece && <div className="move-indicator"></div>}
     </div>
   );
 }

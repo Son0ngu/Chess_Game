@@ -26,17 +26,62 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 1200,
     },
-    wins: {
+    // Renamed from games to gamesPlayed to match controller
+    gamesPlayed: {
       type: Number,
       default: 0,
     },
-    losses: {
+    // Renamed from wins to gamesWon to match controller
+    gamesWon: {
       type: Number,
       default: 0,
     },
-    draws: {
+    gamesLost: {
       type: Number,
       default: 0,
+    },
+    gamesDrawn: {
+      type: Number,
+      default: 0,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
+    avatar: {
+      type: String,
+      default: '',
+    },
+    // Changed isOnline to status with multiple options
+    status: {
+      type: String,
+      enum: ['offline', 'online', 'in_game', 'looking_for_match'],
+      default: 'offline',
+    },
+    // Added field to track current game
+    currentGame: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game',
+      default: null,
+    },
+    // Added gameMode preference for matchmaking
+    gameMode: {
+      type: String,
+      enum: ['casual', 'ranked'],
+      default: 'casual',
+    },
+    // Added time control preference for matchmaking
+    timeControlPreference: {
+      type: String,
+      default: '10min',
+    },
+    resetToken: {
+      type: String,
+      default: null,
+    },
+    resetTokenExpiration: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }
@@ -48,10 +93,9 @@ userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    // Generate a salt
+    // Generate salt
     const salt = await bcrypt.genSalt(10);
-    
-    // Hash the password along with the new salt
+    // Hash the password
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -61,7 +105,49 @@ userSchema.pre('save', async function(next) {
 
 // Method to compare passwords for login
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw error;
+  }
 };
 
-module.exports = mongoose.model('User', userSchema);
+// Method to get public profile without sensitive data
+userSchema.methods.getPublicProfile = function() {
+  const userObject = this.toObject();
+  delete userObject.password;
+  return userObject;
+};
+
+// Method to calculate win rate
+userSchema.methods.getWinRate = function() {
+  if (this.gamesPlayed === 0) return 0;
+  return Math.round((this.gamesWon / this.gamesPlayed) * 100);
+};
+
+/**
+ * Data migration function to update existing users
+ * Use this when deploying the updated model to production
+ */
+userSchema.statics.migrateData = async function() {
+  try {
+    // Convert old field names to new ones
+    const users = await this.find({});
+    for (const user of users) {
+      // Only update if using old field names
+      if (typeof user.games === 'number' && typeof user.gamesPlayed === 'undefined') {
+        user.gamesPlayed = user.games;
+        user.gamesWon = user.wins || 0;
+        user.gamesLost = user.losses || 0;
+        user.gamesDrawn = user.draws || 0;
+        user.status = user.isOnline ? 'online' : 'offline';
+        await user.save();
+      }
+    }
+    console.log('User data migration completed successfully');
+  } catch (error) {
+    console.error('Error migrating user data:', error);
+  }
+};
+
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
