@@ -476,6 +476,153 @@ class GameService {
   */
 
   /**
+   * Handle game resignation
+   */
+  async resignGame(gameId, resigningUserId) {
+    try {
+      // Get game from cache or database
+      const game = await this.getGame(gameId);
+      
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      // Check if game is already completed
+      if (game.status === 'completed') {
+        throw new Error('Game is already completed');
+      }
+      
+      // Find the resigning player
+      const resigningPlayer = game.players.find(p => p.id === resigningUserId);
+      if (!resigningPlayer) {
+        throw new Error('Player not part of this game');
+      }
+      
+      // Determine winner (opponent of the resigning player)
+      const winner = resigningPlayer.color === 'white' ? 'black' : 'white';
+      const winningPlayer = game.players.find(p => p.color === winner);
+      
+      if (!winningPlayer) {
+        throw new Error('Could not determine winner');
+      }
+      
+      // Update game state
+      game.status = 'completed';
+      
+      // Update game in database
+      await Game.findByIdAndUpdate(gameId, {
+        status: 'completed',
+        result: winner === 'white' ? '1-0' : '0-1',
+        completedAt: new Date()
+      });
+      
+      // If game is ranked, update ELO ratings
+      if (game.options && game.options.isRanked) {
+        // Simple fixed ELO change (15 points)
+        const ELO_CHANGE = 15;
+        
+        // Update winner's ELO and stats
+        await User.findByIdAndUpdate(winningPlayer.id, {
+          $inc: { 
+            elo: ELO_CHANGE,
+            gamesPlayed: 1,
+            gamesWon: 1
+          }
+        });
+        
+        // Update loser's ELO and stats
+        await User.findByIdAndUpdate(resigningPlayer.id, {
+          $inc: { 
+            elo: -ELO_CHANGE,
+            gamesPlayed: 1,
+            gamesLost: 1
+          }
+        });
+        
+        logger.info(`Updated ratings after resignation: ${winningPlayer.username} +${ELO_CHANGE}, ${resigningPlayer.username} -${ELO_CHANGE}`);
+      }
+      
+      // Remove from active games cache
+      this.activeGames.delete(gameId);
+      
+      return {
+        gameId,
+        status: 'completed',
+        winner,
+        winnerUsername: winningPlayer.username,
+        resigningUsername: resigningPlayer.username
+      };
+      
+    } catch (error) {
+      logger.error(`Error handling resignation for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle draw acceptance
+   */
+  async acceptDraw(gameId, acceptingUserId) {
+    try {
+      // Get game from cache or database
+      const game = await this.getGame(gameId);
+      
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      // Check if game is already completed
+      if (game.status === 'completed') {
+        throw new Error('Game is already completed');
+      }
+      
+      // Verify the accepting player is in the game
+      const acceptingPlayer = game.players.find(p => p.id === acceptingUserId);
+      if (!acceptingPlayer) {
+        throw new Error('Player not part of this game');
+      }
+      
+      // Mark game as completed with draw result
+      game.status = 'completed';
+      
+      // Update game in database
+      await Game.findByIdAndUpdate(gameId, {
+        status: 'completed',
+        result: '1/2-1/2',
+        completedAt: new Date()
+      });
+      
+      // If game is ranked, update player stats (no ELO change for draws)
+      if (game.options && game.options.isRanked) {
+        // Update both players' stats to record the draw
+        for (const player of game.players) {
+          await User.findByIdAndUpdate(player.id, {
+            $inc: { 
+              gamesPlayed: 1,
+              gamesDrawn: 1
+            }
+          });
+        }
+        
+        logger.info(`Game ${gameId} ended in a draw. No ELO change.`);
+      }
+      
+      // Remove from active games cache
+      this.activeGames.delete(gameId);
+      
+      return {
+        gameId,
+        status: 'completed',
+        result: 'draw'
+      };
+      
+    } catch (error) {
+      logger.error(`Error handling draw acceptance for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Get the current status of a chess game
    */
   getGameStatus(chess) {

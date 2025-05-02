@@ -18,8 +18,6 @@ const useChess = (gameId) => {
   const [playerColor, setPlayerColor] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState({});
   const [selectedPiece, setSelectedPiece] = useState(null);
-  const [pastPositions, setPastPositions] = useState([]);
-  const [futurePositions, setFuturePositions] = useState([]);
   const [inCheck, setInCheck] = useState(false);
   const [gameStatus, setGameStatus] = useState({
     isGameOver: false,
@@ -35,27 +33,22 @@ const useChess = (gameId) => {
     
     // Handle initial game data
     const handleGameData = (data) => {
+      if (!data) return;
+      
       setBoard(data.board || initialBoard());
       setPosition(data.position || null);
       setMoves(data.moves || []);
       setCurrentTurn(data.currentTurn || 'white');
       
       // Set player color based on the player's user ID
-      const playerData = data.players.find(p => p.id === user?.id);
-      setPlayerColor(playerData?.color || 'white');
+      if (data.players && Array.isArray(data.players) && user) {
+        const playerData = data.players.find(p => p && p.id === user.id);
+        setPlayerColor(playerData?.color || 'white');
+      }
       
       // Update game status
       setInCheck(data.inCheck || false);
       setPossibleMoves(data.legalMoves || {});
-
-      const handleGameUpdate = (data) => {
-        // Cập nhật bàn cờ, lịch sử nước đi, và các trạng thái khác
-        setBoard(data.board);  // Cập nhật bàn cờ
-        setPosition(data.position);  // Cập nhật FEN của bàn cờ
-        setMoves(data.history || []);  // Cập nhật lịch sử nước đi
-        setCurrentTurn(data.currentTurn);  // Cập nhật lượt đi
-        setInCheck(data.inCheck || false);  // Kiểm tra trạng thái bị check
-        setPossibleMoves(data.legalMoves || {});  // Cập nhật các nước đi hợp lệ
 
       if (data.gameOver) {
         setGameStatus({
@@ -64,22 +57,22 @@ const useChess = (gameId) => {
         });
       }
     };
-  }
 
     // Listen for game updates
     socket.on('game:update', (data) => {
+      if (!data) return;
+      
       console.log("Game update received:", data.board, data.position);
-      setBoard(data.board);
-      setPosition(data.position);
-      //setMoves(prevMoves => [...prevMoves, data.lastMove]);
-      setCurrentTurn(data.currentTurn);
+      setBoard(data.board || initialBoard());
+      setPosition(data.position || null);
+      setCurrentTurn(data.currentTurn || 'white');
       setInCheck(data.inCheck || false);
       setPossibleMoves(data.legalMoves || {});
 
       if (data.lastMove) {
         setMoves(prevMoves => [...prevMoves, data.lastMove]);
       } else if (data.history) {
-        setMoves(data.history); // fallback khi undo hoặc khi join game
+        setMoves(data.history); // fallback when joining game
       }
       
       if (data.gameOver) {
@@ -107,9 +100,12 @@ const useChess = (gameId) => {
       socket.emit('game:leave', { gameId });
     };
   }, [gameId, user]);
+<<<<<<< HEAD
 
 
   
+=======
+>>>>>>> 271741699c8679088a7bd9e33f5734f4a261d0d5
   
   // Handle piece selection and move highlighting
   const selectPiece = useCallback((piece, position) => {
@@ -127,9 +123,6 @@ const useChess = (gameId) => {
     if (gameStatus.isGameOver || currentTurn !== playerColor) {
       return false;
     }
-
-    setPastPositions(prev => [...prev, position]);
-    setFuturePositions([]);
     
     // Send move to server
     socket.emit('game:move', {
@@ -140,33 +133,6 @@ const useChess = (gameId) => {
     
     return true;
   }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
-  
-  // Request undo
-  const undo = useCallback(() => {
-    if (!gameId || gameStatus.isGameOver || currentTurn !== playerColor) {
-      return false;
-    }
-    
-    // Send undo request to the server
-    socket.emit('game:requestUndo', { gameId });
-  
-    // Optionally, you can disable the undo button or show a loading state while waiting for the server response
-    return true;
-  }, [gameId, currentTurn, playerColor, gameStatus.isGameOver]);
-
-
-  // Handle redo (typically only for offline or analysis mode)
-  const redo = useCallback(() => {
-    if (futurePositions.length === 0) return;
-    
-    const newPosition = futurePositions[futurePositions.length - 1];
-    setPastPositions(prev => [...prev, position]);
-    setFuturePositions(prev => prev.slice(0, -1));
-    setPosition(newPosition);
-    
-    // Emit redo event to server if needed
-    socket.emit('game:redo', { gameId, position: newPosition });
-  }, [futurePositions, position, gameId]);
   
   // Reset game
   const reset = useCallback(() => {
@@ -185,8 +151,6 @@ const useChess = (gameId) => {
     gameStatus,
     selectPiece,
     makeMove,
-    undo,
-    redo,
     reset
   };
 };

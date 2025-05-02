@@ -2,15 +2,11 @@ import React from 'react';
 import '../styles/GameControls.css';
 
 const GameControls = ({ 
-  onUndoRequest, 
-  onRedoRequest,
-  onNewGame, 
   canResign,
   canOfferDraw,
-  canUndo,
-  canRedo,
   onResign, 
-  onOfferDraw 
+  onOfferDraw,
+  gameOver
 }) => {
   return (
     <div className="game-controls">
