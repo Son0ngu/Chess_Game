@@ -24,6 +24,9 @@ const sslOptions = {
 // Disable 'x-powered-by' header for security
 app.disable('x-powered-by');
 
+// Set security headers
+res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';");
+
 // Initialize Express app
 const app = express();
 

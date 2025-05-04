@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import inputSanitize from "../components/inputSanitize";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Signin.css";
 
@@ -50,13 +51,16 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const cleanUsername = DOMPurify.sanitize(formData.username.trim());
+    
+
     // Always trim username before sending
     const payload = {
-      username: formData.username.trim(),
+      username: cleanUsername,
       password: formData.password
     };
 
-    if (!validateForm()) return;
+    if (!validateForm(payload)) return;
 
     setIsLoading(true);
     setServerMessage({ type: "", text: "" });

@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import inputSanitize from "../components/inputSanitize";
 import "../styles/Signup.css";
 
 const API_URL = "https://localhost:5000";
@@ -67,15 +68,18 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const cleanUsername = DOMPurify.sanitize(formData.username.trim());
+    const cleanEmail = DOMPurify.sanitize(formData.email.trim());
+
     // Always trim username and email before sending
     const payload = {
-      username: formData.username.trim(),
-      email: formData.email.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
       password: formData.password,
       confirmPassword: formData.confirmPassword
     };
 
-    if (!validateForm()) return;
+    if (!validateForm(payload)) return;
 
     setIsLoading(true);
     setServerMessage({ type: "", text: "" });
