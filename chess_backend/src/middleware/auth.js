@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const logger = require('../utils/logger');
 
 const auth = async (req, res, next) => {
   try {
@@ -19,6 +20,7 @@ const auth = async (req, res, next) => {
     const user = await User.findById(decoded.id);
     
     if (!user) {
+      logger.error(err); // Winston log
       return res.status(401).json({ error: 'User not found' });
     }
     
@@ -29,8 +31,10 @@ const auth = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
+      logger.error(err); // Winston log
       return res.status(401).json({ error: 'Invalid token' });
     } else if (error.name === 'TokenExpiredError') {
+      logger.error(err); // Winston log
       return res.status(401).json({ error: 'Token expired' });
     }
     

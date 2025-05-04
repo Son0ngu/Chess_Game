@@ -4,7 +4,7 @@ const User = require('../models/user');
 const { Chess } = require('chess.js');
 const GameService = require('../services/GameService');
 const gameAdapter = require('../utils/gameAdapter');
-const logger = require('../utils/logger'); // Ensure logger is imported
+const logger = require('../utils/logger');
 
 // Ensure DB connection is established
 connectDB();
@@ -39,6 +39,7 @@ const getGame = async (req, res) => {
   try {
     const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ error: 'Game not found' });
+    logger.error(err); // Winston log
     
     // Chuyển đổi sang format client mong đợi
     const formattedGame = gameAdapter.toClassicFormat(game);
