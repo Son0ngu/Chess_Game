@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "../styles/Signin.css"; // reuse luôn Signin.css
 
-const API_URL = "http://localhost:5000"; // Backend URL
+const API_URL = "https://localhost:5000"; // Backend URL
 
 const ResetPassword = () => {
   const { token } = useParams(); // lấy token từ URL

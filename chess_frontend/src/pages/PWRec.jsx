@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "../styles/Signin.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://localhost:5000";
 
 const PWRec = () => {
   const [email, setEmail] = useState("");

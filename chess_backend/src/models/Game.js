@@ -42,10 +42,6 @@ const playerSchema = new mongoose.Schema({
     enum: ['white', 'black'],
     required: true,
   },
-  elo: {
-    type: Number,
-    required: true,
-  },
   timeRemaining: {
     type: Number,
   },
@@ -90,7 +86,8 @@ const gameSchema = new mongoose.Schema({
     default: false,
   },
   drawOffers: {
-    type: Array,
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'User',
     default: [],
   },
   lastMove: {
@@ -102,11 +99,49 @@ const gameSchema = new mongoose.Schema({
 // Index for finding user's games
 gameSchema.index({ 'players.user': 1, createdAt: -1 });
 
-// Method to get game state for client
+// Thêm các phương thức tiện ích này vào gameSchema.methods
+
+// Lấy người chơi quân trắng
+gameSchema.methods.getWhitePlayer = function() {
+  return this.players.find(p => p.color === 'white');
+};
+
+// Lấy người chơi quân đen
+gameSchema.methods.getBlackPlayer = function() {
+  return this.players.find(p => p.color === 'black');
+};
+
+// Lấy người chơi theo ID
+gameSchema.methods.getPlayerById = function(userId) {
+  return this.players.find(p => p.user.toString() === userId.toString());
+};
+
+// Lấy đối thủ của người chơi hiện tại
+gameSchema.methods.getOpponent = function(userId) {
+  return this.players.find(p => p.user.toString() !== userId.toString());
+};
+
+// Lấy người chơi theo màu
+gameSchema.methods.getPlayerByColor = function(color) {
+  return this.players.find(p => p.color === color);
+};
+
+// Cập nhật phương thức getPublicGame để đảm bảo nhất quán
 gameSchema.methods.getPublicGame = function() {
+  const whitePlayer = this.getWhitePlayer();
+  const blackPlayer = this.getBlackPlayer();
+  
   return {
     id: this._id,
     players: this.players,
+    whitePlayer: whitePlayer ? {
+      id: whitePlayer.user,
+      username: whitePlayer.username
+    } : null,
+    blackPlayer: blackPlayer ? {
+      id: blackPlayer.user,
+      username: blackPlayer.username
+    } : null,
     status: this.status,
     result: this.result,
     resultReason: this.resultReason,
@@ -115,6 +150,46 @@ gameSchema.methods.getPublicGame = function() {
     moves: this.moves,
     fen: this.fen,
     lastMove: this.lastMove
+  };
+};
+
+// Thêm các phương thức này vào sau gameSchema.methods
+
+// Chuyển đổi sang định dạng cũ (whitePlayer/blackPlayer)
+gameSchema.methods.toLegacyFormat = function() {
+  const whitePlayer = this.players.find(p => p.color === 'white');
+  const blackPlayer = this.players.find(p => p.color === 'black');
+  
+  return {
+    ...this.toObject(),
+    whitePlayer: whitePlayer ? whitePlayer.user : null,
+    blackPlayer: blackPlayer ? blackPlayer.user : null
+  };
+};
+
+// Phương thức tĩnh để chuyển đổi từ định dạng cũ sang định dạng mới
+gameSchema.statics.fromLegacyFormat = function(gameData) {
+  const players = [];
+  
+  if (gameData.whitePlayer) {
+    players.push({
+      user: gameData.whitePlayer,
+      username: gameData.whitePlayerUsername || 'White Player',
+      color: 'white'
+    });
+  }
+  
+  if (gameData.blackPlayer) {
+    players.push({
+      user: gameData.blackPlayer,
+      username: gameData.blackPlayerUsername || 'Black Player',
+      color: 'black'
+    });
+  }
+  
+  return {
+    ...gameData,
+    players
   };
 };
 

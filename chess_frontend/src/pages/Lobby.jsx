@@ -8,12 +8,12 @@ import { Link } from "react-router-dom";
 
 const Lobby = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth(); // Lấy thêm user từ AuthContext
+  const { isAuthenticated, user } = useAuth();
   const [isLoading] = useState(false);
   const [matchmaking, setMatchmaking] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
-  const [onlineUsers, setOnlineUsers] = useState(0);
   const [activePlayers, setActivePlayers] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -28,11 +28,6 @@ const Lobby = () => {
 
     socket.emit("lobby:join");
 
-    // Listen for online users count
-    socket.on("lobby:usersCount", (count) => {
-      setOnlineUsers(count);
-    });
-
     // Listen for active players list
     socket.on("lobby:activePlayers", (players) => {
       setActivePlayers(players);
@@ -40,17 +35,51 @@ const Lobby = () => {
 
     // Listen for game match found
     socket.on("game:matched", (gameData) => {
+      console.log("Match found:", gameData);
       setMatchmaking(false);
-      navigate(`/play/${gameData.id}`);
+      
+      // Kiểm tra gameId hợp lệ trước khi điều hướng
+      if (gameData && gameData.gameId && gameData.gameId !== "undefined") {
+        navigate(`/play/${gameData.gameId}`);
+      } else {
+        console.error("Invalid gameId received:", gameData);
+        setErrorMessage("Lỗi khi tìm trận. Vui lòng thử lại sau.");
+        
+        // Auto-hide error after 5 seconds
+        setTimeout(() => setErrorMessage(""), 5000);
+      }
+    });
+    
+    // Listen for game errors
+    socket.on("game:error", (error) => {
+      console.error("Game error:", error);
+      setMatchmaking(false);
+      setErrorMessage(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
+      
+      // Auto-hide error after 5 seconds
+      setTimeout(() => setErrorMessage(""), 5000);
+    });
+    
+    // Listen for matchmaking status
+    socket.on("game:finding", (data) => {
+      console.log("Finding match, position in queue:", data.position);
     });
 
     return () => {
       socket.emit("lobby:leave");
-      socket.off("lobby:usersCount");
       socket.off("lobby:activePlayers");
       socket.off("game:matched");
+      socket.off("game:error");
+      socket.off("game:finding");
     };
   }, [isAuthenticated, navigate]);
+
+  // Ensure activePlayers is always an array
+  useEffect(() => {
+    if (!Array.isArray(activePlayers)) {
+      setActivePlayers([]);
+    }
+  }, [activePlayers]);
 
   // Update search time counter
   useEffect(() => {
@@ -67,11 +96,9 @@ const Lobby = () => {
   }, [matchmaking]);
 
   const handleFindMatch = () => {
+    setErrorMessage("");
     setMatchmaking(true);
-    socket.emit("game:findMatch", {
-      gameMode: "casual",
-      timeControl: "10min"
-    });
+    socket.emit("game:findMatch");
   };
 
   const handleCancelSearch = () => {
@@ -102,14 +129,14 @@ const Lobby = () => {
           <div className="user-box">
             <span className="user-name">{user?.username || "User"}</span>
           </div>
-          
-          <div className="online-count">
-            <div className="dot"></div>
-            <span>Online: {onlineUsers}</span>
-          </div>
-          
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="error-message">
+          {errorMessage}
+        </div>
+      )}
 
       <div className="lobby-main">
         <div className="matchmaking-panel">
@@ -140,12 +167,12 @@ const Lobby = () => {
         
         <div className="active-players">
           <h2>Active Players</h2>
-          {activePlayers.length > 0 ? (
+          {Array.isArray(activePlayers) && activePlayers.length > 0 ? (
             <ul className="players-list">
               {activePlayers.map(player => (
                 <li key={player.id} className="player-item">
                   <span className="player-name">{player.username}</span>
-                 
+                  <span className="player-status">{player.status}</span>
                 </li>
               ))}
             </ul>

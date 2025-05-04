@@ -22,16 +22,10 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: [6, 'Password must be at least 6 characters']
     },
-    elo: {
-      type: Number,
-      default: 1200,
-    },
-    // Renamed from games to gamesPlayed to match controller
     gamesPlayed: {
       type: Number,
       default: 0,
     },
-    // Renamed from wins to gamesWon to match controller
     gamesWon: {
       type: Number,
       default: 0,
@@ -48,32 +42,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    avatar: {
-      type: String,
-      default: '',
-    },
-    // Changed isOnline to status with multiple options
     status: {
       type: String,
       enum: ['offline', 'online', 'in_game', 'looking_for_match'],
       default: 'offline',
     },
-    // Added field to track current game
     currentGame: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game',
       default: null,
-    },
-    // Added gameMode preference for matchmaking
-    gameMode: {
-      type: String,
-      enum: ['casual', 'ranked'],
-      default: 'casual',
-    },
-    // Added time control preference for matchmaking
-    timeControlPreference: {
-      type: String,
-      default: '10min',
     },
     resetToken: {
       type: String,

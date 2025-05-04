@@ -4,6 +4,38 @@ const User = require('../models/user');
 const logger = require('../utils/logger');
 
 /**
+ * Chuyển đổi thời gian kiểm soát thành số giây
+ * Ví dụ: '10min' => 600 giây
+ */
+function calculateTimeInSeconds(timeControl) {
+  if (!timeControl) return 600; // Mặc định 10 phút nếu không có
+  
+  try {
+    if (timeControl.endsWith('min')) {
+      const minutes = parseInt(timeControl.replace('min', ''));
+      return minutes * 60; // Chuyển đổi phút sang giây
+    }
+    
+    if (timeControl.includes('+')) {
+      // Định dạng "5+3" (5 phút + 3 giây mỗi lượt)
+      const [minutes, increment] = timeControl.split('+').map(Number);
+      return minutes * 60; // Chỉ trả về thời gian cơ sở
+    }
+    
+    // Nếu không khớp với định dạng nào, giả định là số phút
+    const minutes = parseInt(timeControl);
+    if (!isNaN(minutes)) {
+      return minutes * 60;
+    }
+    
+    return 600; // Mặc định 10 phút
+  } catch (error) {
+    logger.error(`Error parsing time control: ${timeControl}`);
+    return 600; // Mặc định 10 phút nếu có lỗi
+  }
+}
+
+/**
  * GameService - Handles all chess game logic and state management
  */
 class GameService {
@@ -11,10 +43,7 @@ class GameService {
     // In-memory cache of active games
     this.activeGames = new Map();
     // In-memory queue of players looking for matches
-    this.matchmakingQueue = {
-      casual: [],
-      ranked: []
-    };
+    this.matchmakingQueue = [];
     // Lưu trữ lịch sử nước đi cho từng game
     this.gameHistory = new Map();
     // Time-based cleanup interval (5 minutes)
@@ -26,80 +55,70 @@ class GameService {
    */
   async createGame(player1Id, player2Id, gameOptions = {}) {
     try {
-      // Create new chess instance
-      const chess = new Chess();
+      logger.debug(`Creating game between ${player1Id} and ${player2Id}`);
       
-      // Set default game options
-      const options = {
-        timeControl: gameOptions.timeControl || '10min',
-        isRanked: gameOptions.isRanked || false
-      };
-      
-      // Get player info from database
+      // Fetch player info
       const [player1, player2] = await Promise.all([
-        User.findById(player1Id, 'username elo'),
-        User.findById(player2Id, 'username elo')
+        User.findById(player1Id, 'username'),
+        User.findById(player2Id, 'username')
       ]);
       
       if (!player1 || !player2) {
         throw new Error('One or both players not found');
       }
+
+      // Create chess instance
+      const chess = new Chess();
       
-      // Randomly assign colors
-      const whitePlayer = Math.random() < 0.5 ? player1Id : player2Id;
-      const blackPlayer = whitePlayer === player1Id ? player2Id : player1Id;
-      
-      // Create game record in database
-      const game = await Game.create({
+      // Create new game document
+      const game = new Game({
         players: [
-          { 
-            user: player1Id, 
+          {
+            user: player1Id,
             username: player1.username,
-            color: whitePlayer === player1Id ? 'white' : 'black',
-            elo: player1.elo
+            color: 'white',
+            timeRemaining: calculateTimeInSeconds(gameOptions.timeControl) 
           },
-          { 
+          {
             user: player2Id,
             username: player2.username,
-            color: blackPlayer === player2Id ? 'black' : 'white',
-            elo: player2.elo
+            color: 'black',
+            timeRemaining: calculateTimeInSeconds(gameOptions.timeControl)
           }
         ],
         fen: chess.fen(),
         pgn: chess.pgn(),
+        timeControl: gameOptions.timeControl || '10min',
+        isRanked: !!gameOptions.isRanked,
         status: 'active',
-        moves: [],
-        timeControl: options.timeControl,
-        isRanked: options.isRanked
+        startTime: new Date()
       });
       
-      // Store game in memory cache
+      // Save to database
+      await game.save();
+      
+      // Add game to memory cache
       this.activeGames.set(game._id.toString(), {
         id: game._id.toString(),
         chess,
-        players: [
-          { 
-            id: player1Id, 
-            username: player1.username,
-            color: whitePlayer === player1Id ? 'white' : 'black',
-            elo: player1.elo
-          },
-          { 
-            id: player2Id,
-            username: player2.username,
-            color: blackPlayer === player2Id ? 'black' : 'white',
-            elo: player2.elo
-          }
-        ],
-        lastActivity: Date.now(),
-        options
+        players: game.players.map(p => ({
+          id: p.user.toString(),
+          username: p.username,
+          color: p.color,
+          timeRemaining: p.timeRemaining
+        })),
+        moves: [],
+        drawOffers: [],
+        undoRequests: [],
+        lastMoveTime: Date.now()
       });
       
-      logger.info(`Game created: ${game._id} between ${player1.username} and ${player2.username}`);
-      return game._id.toString();
-      
+      // Convert ObjectId to string and return
+      const gameId = game._id.toString();
+      logger.debug(`Game created with ID: ${gameId}`);
+      return gameId;
     } catch (error) {
-      logger.error(`Error creating game: ${error.message}`);
+      logger.error(`Error creating game: ${error.stack}`);
       throw error;
     }
   }
@@ -107,35 +126,33 @@ class GameService {
   /**
    * Add player to matchmaking queue
    */
-  addToMatchmaking(userId, options = {}) {
-    const gameMode = options.gameMode || 'casual';
-    const timeControl = options.timeControl || '10min';
+  addToMatchmaking(userId) {
+    const timeControl = '10min';
     
-    // Add player to appropriate queue
-    this.matchmakingQueue[gameMode].push({
+    // Add player to queue
+    this.matchmakingQueue.push({
       userId,
       timeControl,
       timestamp: Date.now()
     });
     
-    logger.info(`User ${userId} added to ${gameMode} matchmaking queue`);
+    logger.info(`User ${userId} added to matchmaking queue`);
     
     // Try to find a match
-    return this.findMatch(gameMode);
+    return this.findMatch();
   }
   
   /**
    * Find a match for waiting players
    */
-  findMatch(gameMode) {
-    const queue = this.matchmakingQueue[gameMode];
+  findMatch() {
+    const queue = this.matchmakingQueue;
     
     if (queue.length < 2) {
       return null;
     }
     
     // Simple matching algorithm - match first two players with same time control
-    // Could be improved with ELO matching or other criteria
     for (let i = 0; i < queue.length; i++) {
       for (let j = i + 1; j < queue.length; j++) {
         const player1 = queue[i];
@@ -143,12 +160,12 @@ class GameService {
         
         if (player1.timeControl === player2.timeControl) {
           // Remove matched players from queue
-          this.matchmakingQueue[gameMode] = queue.filter((_, idx) => idx !== i && idx !== j);
+          this.matchmakingQueue = queue.filter((_, idx) => idx !== i && idx !== j);
           
           // Create a new game for these players
           const gameOptions = {
             timeControl: player1.timeControl,
-            isRanked: gameMode === 'ranked'
+            isRanked: false
           };
           
           // Return the player IDs for game creation
@@ -189,27 +206,25 @@ class GameService {
         chess.load(gameData.fen);
       }
       
-      // Add to in-memory cache
+      // Chuyển đổi từ cấu trúc Game model sang cấu trúc in-memory
       const game = {
         id: gameId,
         chess,
         players: gameData.players.map(p => ({
           id: p.user.toString(),
           username: p.username,
-          color: p.color,
-          elo: p.elo
+          color: p.color
         })),
         lastActivity: Date.now(),
         options: {
           timeControl: gameData.timeControl,
-          isRanked: gameData.isRanked
+          isRanked: false
         },
         status: gameData.status
       };
       
       this.activeGames.set(gameId, game);
       return game;
-      
     } catch (error) {
       logger.error(`Error retrieving game ${gameId}: ${error.message}`);
       throw error;
@@ -283,9 +298,9 @@ class GameService {
       // Check game status
       const gameStatus = this.getGameStatus(game.chess);
       
-      // If game is over and ranked, update player ratings
-      if (gameStatus.isGameOver && game.options.isRanked) {
-        await this.updatePlayerRatings(game, gameStatus.result);
+      // If game is over, update player stats
+      if (gameStatus.isGameOver) {
+        await this.updatePlayerStats(game, gameStatus.result);
       }
       
       // Return the updated game status
@@ -332,148 +347,6 @@ class GameService {
     
     return history.length - 1; // Trả về chỉ số của trạng thái hiện tại
   }
-  /*
-  async requestUndo(gameId, requesterId) {
-    try {
-      const game = this.activeGames.get(gameId);
-      if (!game) {
-        throw new Error('Game not found');
-      }
-      
-      // Kiểm tra xem người yêu cầu có phải là người chơi không
-      const player = game.players.find(p => p.id === requesterId);
-      if (!player) {
-        throw new Error('Not a player in this game');
-      }
-      
-      // Không cho phép undo nếu game đã kết thúc
-      if (game.chess.isGameOver()) {
-        throw new Error('Cannot undo in a completed game');
-      }
-      
-      // Lấy ID của đối thủ để gửi yêu cầu
-      const opponent = game.players.find(p => p.id !== requesterId);
-      if (!opponent) {
-        throw new Error('Opponent not found');
-      }
-      
-      // Đánh dấu yêu cầu undo đang chờ xử lý
-      game.pendingUndoRequest = {
-        requesterId,
-        requestedAt: Date.now()
-      };
-      
-      // Trả về thông tin để socket controller có thể gửi yêu cầu tới đối thủ
-      return {
-        gameId,
-        requesterId,
-        opponentId: opponent.id
-      };
-      
-    } catch (error) {
-      logger.error(`Error requesting undo for game ${gameId}: ${error.message}`);
-      throw error;
-    }
-  }
-
-  
-  async acceptUndo(gameId, accepterId) {
-    try {
-      const game = this.activeGames.get(gameId);
-      if (!game) {
-        throw new Error('Game not found');
-      }
-      
-      // Kiểm tra xem có yêu cầu undo đang chờ xử lý không
-      if (!game.pendingUndoRequest) {
-        throw new Error('No pending undo request');
-      }
-      
-      // Kiểm tra xem người chấp nhận có phải đối thủ không
-      const accepter = game.players.find(p => p.id === accepterId);
-      if (!accepter || accepter.id === game.pendingUndoRequest.requesterId) {
-        throw new Error('Only opponent can accept undo request');
-      }
-      
-      // Lấy lịch sử nước đi
-      const history = this.gameHistory.get(gameId);
-      if (!history || history.length < 2) {
-        throw new Error('No moves to undo');
-      }
-      
-      // Xóa trạng thái hiện tại
-      history.pop();
-      
-      // Lấy trạng thái trước đó
-      const previousState = history[history.length - 1];
-      
-      // Áp dụng trạng thái trước đó
-      game.chess.load(previousState.fen);
-      
-      // Cập nhật game trong database
-      await Game.findByIdAndUpdate(gameId, {
-        fen: previousState.fen,
-        pgn: previousState.pgn,
-        $pop: { moves: 1 } // Xóa nước đi cuối cùng
-      });
-      
-      // Xóa yêu cầu undo đang chờ xử lý
-      delete game.pendingUndoRequest;
-      
-      // Cập nhật thời gian hoạt động
-      game.lastActivity = Date.now();
-      
-      // Trả về thông tin trạng thái mới
-      return {
-        gameId,
-        fen: previousState.fen,
-        currentTurn: previousState.currentTurn,
-        inCheck: previousState.inCheck,
-        legalMoves: this.getLegalMovesMap(game.chess),
-        history
-      };
-      
-    } catch (error) {
-      logger.error(`Error accepting undo for game ${gameId}: ${error.message}`);
-      throw error;
-    }
-  }
-
-  
-  declineUndo(gameId, declinerId) {
-    try {
-      const game = this.activeGames.get(gameId);
-      if (!game) {
-        throw new Error('Game not found');
-      }
-      
-      // Kiểm tra xem có yêu cầu undo đang chờ xử lý không
-      if (!game.pendingUndoRequest) {
-        throw new Error('No pending undo request');
-      }
-      
-      // Kiểm tra xem người từ chối có phải đối thủ không
-      const decliner = game.players.find(p => p.id === declinerId);
-      if (!decliner || decliner.id === game.pendingUndoRequest.requesterId) {
-        throw new Error('Only opponent can decline undo request');
-      }
-      
-      // Xóa yêu cầu undo đang chờ xử lý
-      delete game.pendingUndoRequest;
-      
-      // Trả về thông tin để thông báo cho người yêu cầu
-      return {
-        gameId,
-        requesterId: game.pendingUndoRequest.requesterId,
-        declinerId
-      };
-      
-    } catch (error) {
-      logger.error(`Error declining undo for game ${gameId}: ${error.message}`);
-      throw error;
-    }
-  }
-  */
 
   /**
    * Handle game resignation
@@ -516,31 +389,28 @@ class GameService {
         completedAt: new Date()
       });
       
-      // If game is ranked, update ELO ratings
-      if (game.options && game.options.isRanked) {
-        // Simple fixed ELO change (15 points)
-        const ELO_CHANGE = 15;
-        
-        // Update winner's ELO and stats
-        await User.findByIdAndUpdate(winningPlayer.id, {
-          $inc: { 
-            elo: ELO_CHANGE,
-            gamesPlayed: 1,
-            gamesWon: 1
-          }
-        });
-        
-        // Update loser's ELO and stats
-        await User.findByIdAndUpdate(resigningPlayer.id, {
-          $inc: { 
-            elo: -ELO_CHANGE,
-            gamesPlayed: 1,
-            gamesLost: 1
-          }
-        });
-        
-        logger.info(`Updated ratings after resignation: ${winningPlayer.username} +${ELO_CHANGE}, ${resigningPlayer.username} -${ELO_CHANGE}`);
-      }
+      // Update player stats
+      // Update winner's stats
+      await User.findByIdAndUpdate(winningPlayer.id, {
+        $inc: { 
+          gamesPlayed: 1,
+          gamesWon: 1
+        },
+        status: 'online',
+        currentGame: null
+      });
+      
+      // Update loser's stats
+      await User.findByIdAndUpdate(resigningPlayer.id, {
+        $inc: { 
+          gamesPlayed: 1,
+          gamesLost: 1
+        },
+        status: 'online', 
+        currentGame: null
+      });
+      
+      logger.info(`Updated stats after resignation: ${winningPlayer.username} won, ${resigningPlayer.username} lost`);
       
       // Remove from active games cache
       this.activeGames.delete(gameId);
@@ -550,7 +420,8 @@ class GameService {
         status: 'completed',
         winner,
         winnerUsername: winningPlayer.username,
-        resigningUsername: resigningPlayer.username
+        resigningUsername: resigningPlayer.username,
+        players: game.players // Trả về danh sách players để controller dễ dàng xử lý
       };
       
     } catch (error) {
@@ -563,63 +434,7 @@ class GameService {
    * Handle draw acceptance
    */
   async acceptDraw(gameId, acceptingUserId) {
-    try {
-      // Get game from cache or database
-      const game = await this.getGame(gameId);
-      
-      if (!game) {
-        throw new Error('Game not found');
-      }
-      
-      // Check if game is already completed
-      if (game.status === 'completed') {
-        throw new Error('Game is already completed');
-      }
-      
-      // Verify the accepting player is in the game
-      const acceptingPlayer = game.players.find(p => p.id === acceptingUserId);
-      if (!acceptingPlayer) {
-        throw new Error('Player not part of this game');
-      }
-      
-      // Mark game as completed with draw result
-      game.status = 'completed';
-      
-      // Update game in database
-      await Game.findByIdAndUpdate(gameId, {
-        status: 'completed',
-        result: '1/2-1/2',
-        completedAt: new Date()
-      });
-      
-      // If game is ranked, update player stats (no ELO change for draws)
-      if (game.options && game.options.isRanked) {
-        // Update both players' stats to record the draw
-        for (const player of game.players) {
-          await User.findByIdAndUpdate(player.id, {
-            $inc: { 
-              gamesPlayed: 1,
-              gamesDrawn: 1
-            }
-          });
-        }
-        
-        logger.info(`Game ${gameId} ended in a draw. No ELO change.`);
-      }
-      
-      // Remove from active games cache
-      this.activeGames.delete(gameId);
-      
-      return {
-        gameId,
-        status: 'completed',
-        result: 'draw'
-      };
-      
-    } catch (error) {
-      logger.error(`Error handling draw acceptance for game ${gameId}: ${error.message}`);
-      throw error;
-    }
+    return this.handleDrawOffer(gameId, acceptingUserId, true);
   }
 
   /**
@@ -651,12 +466,12 @@ class GameService {
       
       if (chess.isStalemate()) {
         result.reason = 'stalemate';
+      } else if (chess.isInsufficientMaterial()) {
+        result.reason = 'insufficient_material';
       } else if (chess.isThreefoldRepetition()) {
         result.reason = 'repetition';
-      } else if (chess.isInsufficientMaterial()) {
-        result.reason = 'insufficient material';
-      } else if (chess.isDraw()) {
-        result.reason = '50-move rule';
+      } else {
+        result.reason = 'agreement';
       }
     }
     
@@ -702,9 +517,9 @@ class GameService {
   }
   
   /**
-   * Update player ratings after a game
+   * Update player stats after a game
    */
-  async updatePlayerRatings(game, result) {
+  async updatePlayerStats(game, result) {
     const whitePlayer = game.players.find(p => p.color === 'white');
     const blackPlayer = game.players.find(p => p.color === 'black');
     
@@ -712,15 +527,6 @@ class GameService {
       logger.error(`Missing player information for game ${game.id}`);
       return;
     }
-    
-    // Simple ELO calculation
-    const K = 32; // K-factor
-    const whiteRating = whitePlayer.elo;
-    const blackRating = blackPlayer.elo;
-    
-    // Expected scores
-    const expectedWhite = 1 / (1 + Math.pow(10, (blackRating - whiteRating) / 400));
-    const expectedBlack = 1 / (1 + Math.pow(10, (whiteRating - blackRating) / 400));
     
     // Actual scores
     let scoreWhite, scoreBlack;
@@ -732,36 +538,30 @@ class GameService {
       scoreWhite = 0.5;
       scoreBlack = 0.5;
     } else {
-      return; // No rating update for other outcomes
+      return; // No stats update for other outcomes
     }
-    
-    // Calculate new ratings
-    const newWhiteRating = Math.round(whiteRating + K * (scoreWhite - expectedWhite));
-    const newBlackRating = Math.round(blackRating + K * (scoreBlack - expectedBlack));
     
     // Update in database
     await Promise.all([
       User.findByIdAndUpdate(whitePlayer.id, {
-        $set: { elo: newWhiteRating },
         $inc: {
-          games: 1,
-          wins: scoreWhite === 1 ? 1 : 0,
-          losses: scoreWhite === 0 ? 1 : 0,
-          draws: scoreWhite === 0.5 ? 1 : 0
+          gamesPlayed: 1,
+          gamesWon: scoreWhite === 1 ? 1 : 0,
+          gamesLost: scoreWhite === 0 ? 1 : 0,
+          gamesDrawn: scoreWhite === 0.5 ? 1 : 0
         }
       }),
       User.findByIdAndUpdate(blackPlayer.id, {
-        $set: { elo: newBlackRating },
         $inc: {
-          games: 1,
-          wins: scoreBlack === 1 ? 1 : 0,
-          losses: scoreBlack === 0 ? 1 : 0,
-          draws: scoreBlack === 0.5 ? 1 : 0
+          gamesPlayed: 1,
+          gamesWon: scoreBlack === 1 ? 1 : 0,
+          gamesLost: scoreBlack === 0 ? 1 : 0,
+          gamesDrawn: scoreBlack === 0.5 ? 1 : 0
         }
       })
     ]);
     
-    logger.info(`Updated ratings: ${whitePlayer.username} ${whiteRating} -> ${newWhiteRating}, ${blackPlayer.username} ${blackRating} -> ${newBlackRating}`);
+    logger.info(`Updated stats: ${whitePlayer.username} ${scoreWhite === 1 ? 'won' : (scoreWhite === 0.5 ? 'drew' : 'lost')}, ${blackPlayer.username} ${scoreBlack === 1 ? 'won' : (scoreBlack === 0.5 ? 'drew' : 'lost')}`);
   }
   
   /**
@@ -791,37 +591,29 @@ class GameService {
   /**
    * Get active players list for the lobby
    */
-  async getActivePlayers(limit = 10) {
-    const activePlayerIds = new Set();
-    
-    // Collect unique player IDs from active games
-    for (const game of this.activeGames.values()) {
-      game.players.forEach(player => {
-        activePlayerIds.add(player.id);
-      });
+  async getActivePlayers(limit = 50) {
+    try {
+      // Chỉ lấy người dùng đang online hoặc đang tìm trận trong 30 giây gần đây
+      const cutoffTime = new Date(Date.now() - 30000); // 30 seconds
+      
+      const players = await User.find(
+        { 
+          status: { $in: ['online', 'looking_for_match', 'in_game'] },
+          lastActive: { $gte: cutoffTime }
+        },
+        'username status lastActive'
+      ).sort({ lastActive: -1 }).limit(limit);
+      
+      // Chuyển đổi sang định dạng mà frontend mong đợi
+      return players.map(player => ({
+        id: player._id.toString(),
+        username: player.username,
+        status: player.status
+      }));
+    } catch (error) {
+      logger.error(`Error getting active players: ${error.message}`);
+      return [];
     }
-    
-    // Add players from matchmaking queues
-    for (const mode in this.matchmakingQueue) {
-      this.matchmakingQueue[mode].forEach(entry => {
-        activePlayerIds.add(entry.userId);
-      });
-    }
-    
-    // Convert Set to Array and limit the number of results
-    const playerIds = [...activePlayerIds].slice(0, limit);
-    
-    // Get player details from database
-    const players = await User.find(
-      { _id: { $in: playerIds } },
-      'username elo'
-    );
-    
-    return players.map(p => ({
-      id: p._id,
-      username: p.username,
-      rating: p.elo
-    }));
   }
 
   async undoMove(game, userId) {
@@ -844,6 +636,501 @@ class GameService {
     return game.getPublicGame(); // Return the updated game state
   }
 
+  /**
+   * Get player information from game for API response
+   */
+  getGamePlayers(gameId) {
+    const game = this.activeGames.get(gameId);
+    if (!game) return null;
+    
+    return {
+      white: game.players.find(p => p.color === 'white'),
+      black: game.players.find(p => p.color === 'black')
+    };
+  }
+
+  /**
+   * Chuyển đổi game từ định dạng Model sang định dạng Service 
+   */
+  convertGameToServiceFormat(gameModel) {
+    // Chuyển từ Game model sang định dạng in-memory trong service
+    const chess = new Chess();
+    if (gameModel.fen) {
+      chess.load(gameModel.fen);
+    }
+    
+    return {
+      id: gameModel._id.toString(),
+      chess,
+      players: gameModel.players.map(p => ({
+        id: p.user.toString(),
+        username: p.username,
+        color: p.color
+      })),
+      lastActivity: Date.now(),
+      options: {
+        timeControl: gameModel.timeControl,
+        isRanked: false
+      },
+      status: gameModel.status
+    };
+  }
+
+  /**
+   * Chuyển đổi từ định dạng Service về định dạng Model
+   */
+  convertGameToModelFormat(serviceGame) {
+    return {
+      players: serviceGame.players.map(p => ({
+        user: p.id,
+        username: p.username,
+        color: p.color
+      })),
+      fen: serviceGame.chess.fen(),
+      pgn: serviceGame.chess.pgn(),
+      status: serviceGame.status,
+      timeControl: serviceGame.options.timeControl,
+      isRanked: false
+    };
+  }
+
+  /**
+   * Match a user with an opponent and create a game if match found
+   * @param {string} userId - ID của người dùng cần tìm đối thủ
+   * @param {Object} options - Tùy chọn cho trận đấu
+   * @returns {Object} - Kết quả của quá trình tìm đối thủ
+   */
+  async matchUsers(userId) {
+    try {
+      const timeControl = '10min';
+      logger.debug(`[MATCHMAKING] Starting matchmaking for user ${userId}`);
+
+      // Find user
+      const user = await User.findById(userId, 'username');
+      if (!user) {
+        logger.error(`[MATCHMAKING] User ${userId} not found`);
+        return {
+          success: false,
+          message: 'User not found'
+        };
+      }
+
+      logger.debug(`[MATCHMAKING] Found user ${user.username}`);
+
+      // Check if there's any player looking for a match
+      const potentialOpponents = this.matchmakingQueue
+        .filter(entry => entry.userId !== userId && entry.timeControl === timeControl);
+      
+      logger.debug(`[MATCHMAKING] Found ${potentialOpponents.length} potential opponents`);
+      
+      if (potentialOpponents.length > 0) {
+        // Pick the first matching opponent
+        const opponent = potentialOpponents[0];
+        
+        // Remove opponent from queue
+        this.matchmakingQueue = this.matchmakingQueue
+          .filter(entry => entry.userId !== opponent.userId);
+        
+        logger.debug(`[MATCHMAKING] Selected opponent: ${opponent.userId}`);
+        
+        // Get opponent info
+        const opponentUser = await User.findById(opponent.userId, 'username');
+        if (!opponentUser) {
+          logger.error(`[MATCHMAKING] Opponent ${opponent.userId} not found in database`);
+          throw new Error('Opponent not found in database');
+        }
+        
+        // Create game with explicit error handling
+        let gameId;
+        try {
+          gameId = await this.createGame(
+            userId,
+            opponent.userId,
+            { timeControl, isRanked: false }
+          );
+          
+          logger.debug(`[MATCHMAKING] Game created with ID: ${gameId}`);
+          
+          // Verify gameId is valid
+          if (!gameId || typeof gameId !== 'string' || gameId === 'undefined') {
+            logger.error(`[MATCHMAKING] Invalid gameId created: ${gameId}`);
+            throw new Error('Failed to create a valid game ID');
+          }
+        } catch (gameError) {
+          logger.error(`[MATCHMAKING] Game creation failed: ${gameError.message}`);
+          throw new Error(`Game creation failed: ${gameError.message}`);
+        }
+        
+        try {
+          // Update player statuses in database
+          await User.updateMany(
+            { _id: { $in: [userId, opponent.userId] } },
+            { status: 'in_game', currentGame: gameId }
+          );
+          
+          logger.debug(`[MATCHMAKING] Updated player statuses to in_game`);
+        } catch (updateError) {
+          logger.error(`[MATCHMAKING] Failed to update player statuses: ${updateError.message}`);
+          // Continue despite this error
+        }
+        
+        return {
+          success: true,
+          gameId: gameId,
+          opponent: {
+            id: opponent.userId,
+            username: opponentUser.username
+          }
+        };
+      } else {
+        // No match found, add user to queue
+        this.matchmakingQueue = this.matchmakingQueue
+          .filter(entry => entry.userId !== userId);
+        
+        this.matchmakingQueue.push({
+          userId,
+          timeControl,
+          timestamp: Date.now()
+        });
+        
+        const queuePosition = this.matchmakingQueue.length;
+        logger.debug(`[MATCHMAKING] Added ${user.username} to queue at position ${queuePosition}`);
+        
+        return {
+          success: false,
+          queuePosition
+        };
+      }
+    } catch (error) {
+      logger.error(`[MATCHMAKING] Error: ${error.message}`);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  /**
+   * Retrieve games for a specific user
+   */
+  async getUserGames(userId, limit = 20) {
+    try {
+      const games = await Game.find({
+        'players.user': userId
+      }).sort({ createdAt: -1 }).limit(limit);
+      
+      return games;
+    } catch (error) {
+      logger.error(`Error retrieving user games: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Hoàn thành game với kết quả cho trước
+   */
+  async completeGame(gameId, result) {
+    try {
+      // Lấy game từ cache hoặc database
+      const game = await this.getGame(gameId);
+      
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      if (game.status === 'completed') {
+        throw new Error('Game is already completed');
+      }
+      
+      // Cập nhật trạng thái game trong memory
+      game.status = 'completed';
+      
+      let winnerColor = null;
+      let drawReason = null;
+      let resultString = null;
+      
+      switch (result.type) {
+        case 'checkmate':
+          winnerColor = result.winner;
+          resultString = winnerColor === 'white' ? '1-0' : '0-1';
+          break;
+        case 'resignation':
+          winnerColor = result.winner;
+          resultString = winnerColor === 'white' ? '1-0' : '0-1';
+          break;
+        case 'timeout':
+          winnerColor = result.winner;
+          resultString = winnerColor === 'white' ? '1-0' : '0-1';
+          break;
+        case 'draw':
+          drawReason = result.reason || 'agreement';
+          resultString = '1/2-1/2';
+          break;
+        default:
+          throw new Error('Invalid result type');
+      }
+      
+      // Cập nhật game trong database
+      const updatedGame = await Game.findByIdAndUpdate(
+        gameId,
+        {
+          status: result.type,
+          result: resultString,
+          ...(drawReason && { resultReason: drawReason }),
+          completedAt: new Date()
+        },
+        { new: true }
+      );
+      
+      // Cập nhật thống kê người chơi
+      if (winnerColor) {
+        const winner = game.players.find(p => p.color === winnerColor);
+        const loser = game.players.find(p => p.color !== winnerColor);
+        
+        if (winner && loser) {
+          await Promise.all([
+            // Cập nhật người thắng
+            User.findByIdAndUpdate(winner.id, {
+              $inc: { gamesPlayed: 1, gamesWon: 1 },
+              status: 'online',
+              currentGame: null
+            }),
+            
+            // Cập nhật người thua
+            User.findByIdAndUpdate(loser.id, {
+              $inc: { gamesPlayed: 1, gamesLost: 1 },
+              status: 'online',
+              currentGame: null
+            })
+          ]);
+        }
+      } else if (result.type === 'draw') {
+        // Cập nhật cả hai người chơi trong trường hợp hòa
+        await User.updateMany(
+          { _id: { $in: game.players.map(p => p.id) } },
+          { 
+            $inc: { gamesPlayed: 1, gamesDrawn: 1 },
+            status: 'online',
+            currentGame: null
+          }
+        );
+      }
+      
+      // Xóa game khỏi bộ nhớ cache
+      this.activeGames.delete(gameId);
+      
+      // Trả về thông tin game đã cập nhật
+      return {
+        gameId,
+        status: updatedGame.status,
+        result: resultString,
+        winnerColor,
+        drawReason,
+        players: game.players
+      };
+    } catch (error) {
+      logger.error(`Error completing game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Xử lý hết thời gian của người chơi
+   */
+  async handleTimeout(gameId, timeoutPlayerId) {
+    try {
+      // Lấy game từ cache hoặc database
+      const game = await this.getGame(gameId);
+      
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      if (game.status === 'completed') {
+        throw new Error('Game is already completed');
+      }
+      
+      // Xác định người chơi hết thời gian
+      const timeoutPlayer = game.players.find(p => p.id === timeoutPlayerId);
+      if (!timeoutPlayer) {
+        throw new Error('Player is not part of this game');
+      }
+      
+      // Xác định người thắng
+      const winnerColor = timeoutPlayer.color === 'white' ? 'black' : 'white';
+      
+      // Kết thúc game với lý do hết thời gian
+      return this.completeGame(gameId, {
+        type: 'timeout',
+        winner: winnerColor
+      });
+    } catch (error) {
+      logger.error(`Error handling timeout for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Đề nghị hòa
+   */
+  async offerDraw(gameId, offeringPlayerId) {
+    try {
+      // Lấy game từ database
+      const gameData = await Game.findById(gameId);
+      
+      if (!gameData) {
+        throw new Error('Game not found');
+      }
+      
+      if (gameData.status !== 'active') {
+        throw new Error('Game is not active');
+      }
+      
+      // Kiểm tra người chơi có trong game không
+      const player = gameData.players.find(p => 
+        p.user.toString() === offeringPlayerId.toString()
+      );
+      
+      if (!player) {
+        throw new Error('Player is not part of this game');
+      }
+      
+      // Thêm hoặc cập nhật đề nghị hòa
+      if (!gameData.drawOffers) {
+        gameData.drawOffers = [];
+      }
+      
+      // Chỉ thêm vào nếu chưa có
+      if (!gameData.drawOffers.some(id => id.toString() === offeringPlayerId.toString())) {
+        gameData.drawOffers.push(offeringPlayerId);
+        await gameData.save();
+      }
+      
+      return {
+        gameId,
+        offeringPlayer: {
+          id: player.user,
+          username: player.username,
+          color: player.color
+        },
+        drawOffered: true
+      };
+    } catch (error) {
+      logger.error(`Error offering draw for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Xử lý đề nghị hòa (chấp nhận hoặc từ chối)
+   */
+  async handleDrawOffer(gameId, respondingPlayerId, accepted) {
+    try {
+      // Lấy game từ database
+      const gameData = await Game.findById(gameId);
+      
+      if (!gameData) {
+        throw new Error('Game not found');
+      }
+      
+      if (gameData.status !== 'active') {
+        throw new Error('Game is not active');
+      }
+      
+      // Kiểm tra người chơi có trong game không
+      const player = gameData.players.find(p => 
+        p.user.toString() === respondingPlayerId.toString()
+      );
+      
+      if (!player) {
+        throw new Error('Player is not part of this game');
+      }
+      
+      // Check if there is a draw offer
+      if (!gameData.drawOffers || gameData.drawOffers.length === 0) {
+        throw new Error('No draw has been offered');
+      }
+      
+      // Check that the responding player didn't make the offer
+      if (gameData.drawOffers.some(id => id.toString() === respondingPlayerId.toString())) {
+        throw new Error('You cannot accept your own draw offer');
+      }
+      
+      if (accepted) {
+        // Update game to completed with draw result
+        await Game.findByIdAndUpdate(gameId, {
+          status: 'completed',
+          result: '1/2-1/2',
+          resultReason: 'agreement',
+          completedAt: new Date()
+        });
+
+        // Update both players' stats
+        await User.updateMany(
+          { _id: { $in: gameData.players.map(p => p.user) } },
+          { 
+            $inc: { gamesPlayed: 1, gamesDrawn: 1 },
+            status: 'online',
+            currentGame: null
+          }
+        );
+
+        // Remove game from active games if it's there
+        this.activeGames.delete(gameId);
+
+        // Return success response
+        return {
+          gameId,
+          drawAccepted: true,
+          status: 'completed',
+          result: '1/2-1/2',
+          players: gameData.players
+        };
+      } else {
+        // Just clear draw offers if declined
+        gameData.drawOffers = [];
+        await gameData.save();
+        
+        return {
+          gameId,
+          drawAccepted: false,
+          message: 'Draw declined'
+        };
+      }
+    } catch (error) {
+      logger.error(`Error handling draw offer for game ${gameId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy bảng xếp hạng người chơi
+   */
+  async getPlayerRankings(limit = 50) {
+    try {
+      // Lấy danh sách người chơi đã hoàn thành ít nhất 1 game
+      const players = await User.find(
+        { gamesPlayed: { $gt: 0 } },
+        'username gamesPlayed gamesWon gamesLost gamesDrawn'
+      ).limit(limit).sort({ gamesWon: -1, gamesPlayed: 1 });
+      
+      // Tính toán tỷ lệ thắng và xếp hạng
+      return players.map((player, index) => ({
+        rank: index + 1,
+        id: player._id,
+        username: player.username,
+        gamesPlayed: player.gamesPlayed || 0,
+        gamesWon: player.gamesWon || 0,
+        gamesLost: player.gamesLost || 0,
+        gamesDrawn: player.gamesDrawn || 0,
+        winRate: player.gamesPlayed ? 
+          Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
+      }));
+    } catch (error) {
+      logger.error(`Error retrieving player rankings: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 module.exports = new GameService();

@@ -27,7 +27,7 @@ const registerUser = async (req, res) => {
       username,
       email,
       password, // Just use the plain password here - it will be hashed by the pre-save middleware
-      //elo: 1200, // default rating
+    
     });
 
     await user.save();
@@ -69,7 +69,6 @@ const loginUser = async (req, res) => {
       user: {
         id: user._id,
         username: user.username,
-        elo: user.elo,
         email: user.email,
         gamesPlayed: user.gamesPlayed,
         gamesWon: user.gamesWon,
@@ -112,17 +111,16 @@ const getUserProfile = async (req, res) => {
 };
 
 // Get player rankings
-/*const getPlayerRankings = async (req, res) => {
+const getPlayerRankings = async (req, res) => {
   try {
-    // Get all users with ELO ratings, sort by highest ELO
-    const players = await User.find({}, 'username elo gamesPlayed gamesWon')
-      .sort({ elo: -1 });
+    // Get all users with their stats
+    const players = await User.find({}, 'username gamesPlayed gamesWon')
+      .sort({ gamesWon: -1 });
     
     // Calculate additional stats
     const playersWithStats = players.map((player, index) => ({
       rank: index + 1,
       username: player.username,
-      elo: player.elo || 1200,
       gamesPlayed: player.gamesPlayed || 0,
       gamesWon: player.gamesWon || 0,
       winRate: player.gamesPlayed ? 
@@ -134,14 +132,14 @@ const getUserProfile = async (req, res) => {
     console.error('Error retrieving player rankings:', err);
     res.status(500).json({ error: 'Failed to retrieve rankings' });
   }
-};*/
+};
 
 // Get active users for matchmaking
 const getActiveUsers = async (req, res) => {
   try {
     const activeUsers = await User.find(
       { status: { $in: ['online', 'looking_for_match'] } },
-      'username elo status'
+      'username status'
     );
     
     res.json(activeUsers);
@@ -154,19 +152,19 @@ const getActiveUsers = async (req, res) => {
 // Get top players for leaderboard
 const getLeaderboard = async (req, res) => {
   try {
-    // Get top 10 players with most games and highest ELO
+    // Get top 10 players with most games won
     const topPlayers = await User.find(
       { gamesPlayed: { $gt: 5 } }, // Only include players with more than 5 games
-      'username elo gamesPlayed gamesWon'
+      'username gamesPlayed gamesWon'
     )
-    .sort({ elo: -1 })
+    .sort({ gamesWon: -1, gamesPlayed: -1 })
     .limit(10);
     
     const leaderboard = topPlayers.map((player, index) => ({
       rank: index + 1,
       username: player.username,
-      elo: player.elo || 1200,
       gamesPlayed: player.gamesPlayed || 0,
+      gamesWon: player.gamesWon || 0,
       winRate: player.gamesPlayed ? 
         Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
     }));

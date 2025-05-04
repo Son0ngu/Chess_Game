@@ -146,8 +146,6 @@ const Play = () => {
 
   const handleAcceptDraw = () => {
     socket.emit("game:acceptDraw", { gameId });
-    setGameOver(true);
-    setGameResult({ type: "draw", reason: "agreement" });
     setReceivedDrawOffer(false);
   };
 
