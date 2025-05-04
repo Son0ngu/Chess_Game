@@ -21,6 +21,9 @@ const sslOptions = {
   ca: fs.readFileSync('./certs/ca.pem')
 };
 
+// Disable 'x-powered-by' header for security
+app.disable('x-powered-by');
+
 // Initialize Express app
 const app = express();
 
