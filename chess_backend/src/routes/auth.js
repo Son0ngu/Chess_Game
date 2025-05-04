@@ -7,9 +7,20 @@ const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { registerValidation, loginValidation } = require('../middleware/userValidator');
+const { validationResult } = require('express-validator');
+
+// Helper middleware to handle validation errors
+const handleValidation = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
 
 // Register a new user
-router.post('/register', async (req, res) => {
+router.post('/register', registerValidation, handleValidation, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -43,7 +54,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user
-router.post('/login', async (req, res) => {
+router.post('/login', loginValidation, handleValidation, async (req, res) => {
   try {
     const { username, password } = req.body;
     console.log("Login attempt for:", username);

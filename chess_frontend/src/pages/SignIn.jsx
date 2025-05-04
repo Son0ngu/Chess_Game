@@ -1,15 +1,15 @@
 // src/pages/SignIn.jsx
-import React, { useState } from "react"; // Remove useContext from import
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
-import { useAuth } from "../context/AuthContext"; // Make sure to import your auth context
+import { useAuth } from "../context/AuthContext";
 import "../styles/Signin.css";
 
 const API_URL = "https://localhost:5000";
 
 const SignIn = () => {
   const navigate = useNavigate();
-  const { login } = useAuth(); // Get the login function from your auth context
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     username: "",
     password: ""
@@ -21,7 +21,7 @@ const SignIn = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
+
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
@@ -29,64 +29,61 @@ const SignIn = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.username.trim()) {
+    const usernameTrimmed = formData.username.trim();
+
+    // Username: required, alphanumeric/underscore, 3-20 chars
+    if (!usernameTrimmed) {
       newErrors.username = "Username is required";
+    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(usernameTrimmed)) {
+      newErrors.username = "Username must be 3-20 alphanumeric characters";
     }
-    
+
+    // Password: required
     if (!formData.password) {
       newErrors.password = "Password is required";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    // Always trim username before sending
+    const payload = {
+      username: formData.username.trim(),
+      password: formData.password
+    };
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
     setServerMessage({ type: "", text: "" });
-    
+
     try {
-      console.log("Sending login request with:", formData);
-      const response = await axios.post(`${API_URL}/auth/login`, formData);
-      console.log("Login response received:", response.data); // Add this to debug
-      
-      // Handle successful login
+      const response = await axios.post(`${API_URL}/auth/login`, payload);
+
       if (response.data && response.data.token) {
-        // Create user object
-        const userData = {
-          id: response.data.user.id || response.data.user._id, // Handle both id formats
-          username: response.data.user.username,
-          email: response.data.user.email,
-          elo: response.data.user.elo
-        };
-        
-        console.log("User data for context:", userData);
-        
-        // Update auth context - directly pass the response data
+        // Update auth context
         login(response.data);
-        
-        setServerMessage({ 
-          type: "success", 
-          text: "Login successful! Redirecting to lobby..." 
+
+        setServerMessage({
+          type: "success",
+          text: "Login successful! Redirecting to lobby..."
         });
-        
-        // Navigate to lobby
+
         navigate("/lobby");
       } else {
         throw new Error("Invalid response format");
       }
     } catch (error) {
       console.error("Login error:", error);
-      
+
       const errorMessage = error.response?.data?.error || "Login failed. Please try again.";
-      setServerMessage({ 
-        type: "error", 
-        text: errorMessage 
+      setServerMessage({
+        type: "error",
+        text: errorMessage
       });
     } finally {
       setIsLoading(false);
@@ -100,14 +97,14 @@ const SignIn = () => {
           <h2 className="signin-title">Sign In</h2>
           <p className="signin-subtitle">Enter your credentials to access your account</p>
         </div>
-        
+
         {serverMessage.text && (
           <div className={`auth-${serverMessage.type}`}>
             {serverMessage.text}
           </div>
         )}
-        
-        <form className="signin-form" onSubmit={handleSubmit}>
+
+        <form className="signin-form" onSubmit={handleSubmit} noValidate>
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -119,10 +116,17 @@ const SignIn = () => {
               onChange={handleChange}
               placeholder="Enter your username"
               disabled={isLoading}
+              autoComplete="username"
+              aria-invalid={!!errors.username}
+              aria-describedby={errors.username ? "username-error" : undefined}
             />
-            {errors.username && <div className="form-error">{errors.username}</div>}
+            {errors.username && (
+              <div className="form-error" id="username-error">
+                {errors.username}
+              </div>
+            )}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -134,19 +138,26 @@ const SignIn = () => {
               onChange={handleChange}
               placeholder="Enter your password"
               disabled={isLoading}
+              autoComplete="current-password"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? "password-error" : undefined}
             />
-            {errors.password && <div className="form-error">{errors.password}</div>}
+            {errors.password && (
+              <div className="form-error" id="password-error">
+                {errors.password}
+              </div>
+            )}
           </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             className="signin-button"
             disabled={isLoading}
           >
             {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
-        
+
         <div className="signin-options">
           Don't have an account? <Link to="/signup">Sign Up</Link>
         </div>

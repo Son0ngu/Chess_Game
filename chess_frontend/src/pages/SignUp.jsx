@@ -1,10 +1,9 @@
 // src/pages/SignUp.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios"; // Use axios instead of socket
-import "../styles/Signup.css"; 
+import axios from "axios";
+import "../styles/Signup.css";
 
-// API base URL - match your backend port
 const API_URL = "https://localhost:5000";
 
 const SignUp = () => {
@@ -22,7 +21,7 @@ const SignUp = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
+
     // Clear error when user starts typing in a field
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
@@ -31,69 +30,75 @@ const SignUp = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
-    // Username validation
-    if (!formData.username.trim()) {
+    const usernameTrimmed = formData.username.trim();
+    const emailTrimmed = formData.email.trim();
+
+    // Username: required, alphanumeric/underscore, 3-20 chars
+    if (!usernameTrimmed) {
       newErrors.username = "Username is required";
-    } else if (formData.username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters";
+    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(usernameTrimmed)) {
+      newErrors.username = "Username must be 3-20 alphanumeric characters";
     }
-    
-    // Email validation
+
+    // Email: required, valid format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) {
+    if (!emailTrimmed) {
       newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
+    } else if (!emailRegex.test(emailTrimmed)) {
       newErrors.email = "Please enter a valid email";
     }
-    
-    // Password validation
+
+    // Password: required, min 6 chars
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
-    
-    // Confirm password validation
+
+    // Confirm password
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    // Always trim username and email before sending
+    const payload = {
+      username: formData.username.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
+      confirmPassword: formData.confirmPassword
+    };
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
     setServerMessage({ type: "", text: "" });
-    
+
     try {
-      // Call the register API endpoint
-      const response = await axios.post(`${API_URL}/auth/register`, formData);
-      
-      // Handle successful registration
+      const response = await axios.post(`${API_URL}/auth/register`, payload);
+
       if (response.data) {
-        setServerMessage({ 
-          type: "success", 
-          text: "Account created successfully! Redirecting to login..." 
+        setServerMessage({
+          type: "success",
+          text: "Account created successfully! Redirecting to login..."
         });
-        
-        // Redirect to sign in page after short delay
+
         setTimeout(() => {
           navigate("/signin");
         }, 2000);
       }
     } catch (error) {
       console.error("Register error:", error);
-      console.error("Response data:", error.response?.data);
       const errorMessage = error.response?.data?.error || "Error creating account. Please try again.";
-      setServerMessage({ 
-        type: "error", 
-        text: errorMessage 
+      setServerMessage({
+        type: "error",
+        text: errorMessage
       });
     } finally {
       setIsLoading(false);
@@ -107,9 +112,9 @@ const SignUp = () => {
           <h2 className="signup-title">Create an Account</h2>
           <p className="signup-subtitle">Join us to play chess online</p>
         </div>
-        
+
         {serverMessage.text && (
-          <div 
+          <div
             className={`auth-error`}
             role="alert"
             aria-live="assertive"
@@ -117,7 +122,7 @@ const SignUp = () => {
             {serverMessage.text}
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit} className="signup-form" noValidate>
           <div className="form-group">
             <label htmlFor="username">Username</label>
@@ -139,7 +144,7 @@ const SignUp = () => {
               </span>
             )}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="email">Email</label>
             <input
@@ -160,7 +165,7 @@ const SignUp = () => {
               </span>
             )}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -181,7 +186,7 @@ const SignUp = () => {
               </span>
             )}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
             <input
@@ -202,16 +207,16 @@ const SignUp = () => {
               </span>
             )}
           </div>
-          
-          <button 
-            type="submit" 
-            className="signup-button" 
+
+          <button
+            type="submit"
+            className="signup-button"
             disabled={isLoading}
           >
             {isLoading ? "Creating Account..." : "Sign Up"}
           </button>
         </form>
-        
+
         <div className="signup-options">
           Already have an account?{" "}
           <Link to="/signin">
