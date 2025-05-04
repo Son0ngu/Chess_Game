@@ -1,27 +1,36 @@
 // Entry point for the Chess backend server
-// This file loads the server configuration from src/config/server.js
 
 require('dotenv').config();
 const express = require('express');
-const http = require('http');
 const socketIO = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/auth');
-const gamesRoutes = require('./src/routes/game'); // Note: Changed from 'games' to 'game'
+const gamesRoutes = require('./src/routes/game');
 const errorHandler = require('./src/middleware/errorHandler');
 const setupGameSocket = require('./src/socket/gameSocket');
 const logger = require('./src/utils/logger');
+const fs = require('fs');
+const https = require('https');
+
+// SSL options
+const sslOptions = {
+  key: fs.readFileSync('./certs/server-key.pem'),
+  cert: fs.readFileSync('./certs/server.pem'),
+  ca: fs.readFileSync('./certs/ca.pem')
+};
 
 // Initialize Express app
 const app = express();
-const server = http.createServer(app);
+
+// Use HTTPS server for everything
+const httpsServer = https.createServer(sslOptions, app);
 
 // Initialize Socket.IO with CORS settings
-const io = socketIO(server, {
+const io = socketIO(httpsServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: process.env.CLIENT_URL || "https://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -32,14 +41,14 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  origin: process.env.CLIENT_URL || "https://localhost:3000",
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
-app.use('/auth', authRoutes); // Make sure this matches
+app.use('/auth', authRoutes);
 app.use('/games', gamesRoutes);
 
 // Base route
@@ -71,15 +80,15 @@ mongoose.connection.on('disconnected', () => {
 
 // Start the server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
+httpsServer.listen(PORT, () => {
+  logger.info(`HTTPS server running on https://localhost:${PORT}`);
+  console.log(`HTTPS server running on https://localhost:${PORT}`);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error(`Unhandled Rejection: ${err}`);
-  server.close(() => process.exit(1));
+  httpsServer.close(() => process.exit(1));
 });
 
 console.log(`Server running on port ${PORT}`);
-

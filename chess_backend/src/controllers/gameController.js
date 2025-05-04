@@ -8,9 +8,9 @@ const { Chess } = require('chess.js');
 connectDB();
 
 // ELO rating constants
-const ELO_WIN_POINTS = 150;
-const ELO_LOSE_POINTS = 100;
-const DEFAULT_ELO = 1200;
+//const ELO_WIN_POINTS = 150;
+//const ELO_LOSE_POINTS = 100;
+//const DEFAULT_ELO = 1200;
 
 // Create a new game
 const createGame = async (req, res) => {

@@ -5,7 +5,7 @@ import axios from "axios"; // Use axios instead of socket
 import "../styles/Signup.css"; 
 
 // API base URL - match your backend port
-const API_URL = "http://localhost:5000";
+const API_URL = "https://localhost:5000";
 
 const SignUp = () => {
   const navigate = useNavigate();

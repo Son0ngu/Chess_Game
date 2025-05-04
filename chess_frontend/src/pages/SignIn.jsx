@@ -5,7 +5,7 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext"; // Make sure to import your auth context
 import "../styles/Signin.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://localhost:5000";
 
 const SignIn = () => {
   const navigate = useNavigate();

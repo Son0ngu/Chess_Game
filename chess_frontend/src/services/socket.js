@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import { getToken } from '../utils/storage';
 
 // Base URL for socket connection
-const SOCKET_URL = 'http://localhost:5000';
+const SOCKET_URL = 'https://localhost:5000';
 
 // Create socket instance with authentication
 export const socket = io(SOCKET_URL, {
