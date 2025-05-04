@@ -9,14 +9,8 @@ const connectDB = async () => {
     // Get MongoDB URI from environment variables or use default
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/chess_game';
     
-    // Set up MongoDB connection options
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    };
-
-    // Connect to MongoDB
-    await mongoose.connect(mongoURI, options);
+    // Kết nối đơn giản, không cần các tùy chọn cũ
+    await mongoose.connect(mongoURI);
     
     logger.info(`MongoDB Connected: ${mongoose.connection.host}`);
   } catch (error) {

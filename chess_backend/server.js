@@ -13,35 +13,16 @@ const setupGameSocket = require('./src/socket/gameSocket');
 const logger = require('./src/utils/logger');
 const fs = require('fs');
 const https = require('https');
-
-// SSL options
-const sslOptions = {
-  key: fs.readFileSync('./certs/server-key.pem'),
-  cert: fs.readFileSync('./certs/server.pem'),
-  ca: fs.readFileSync('./certs/ca.pem')
-};
+const http = require('http');
+const User = require('./src/models/user'); // Assuming User model is defined in this path
 
 // Initialize Express app
 const app = express();
-
-// Use HTTPS server for everything
-const httpsServer = https.createServer(sslOptions, app);
-
-// Initialize Socket.IO with CORS settings
-const io = socketIO(httpsServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || "https://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
-
-// Connect to MongoDB
-connectDB();
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || "https://localhost:3000",
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
   credentials: true
 }));
 app.use(express.json());
@@ -59,8 +40,60 @@ app.get('/', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Set up Socket.IO for game events
-setupGameSocket(io);
+// Connect to MongoDB first
+connectDB().then(async () => {
+  try {
+    // Reset trạng thái người dùng khi server khởi động
+    const result = await User.updateMany(
+      { status: { $in: ['online', 'looking_for_match'] } },
+      { status: 'offline' }
+    );
+    
+    console.log(`Reset ${result.modifiedCount} users to offline status`);
+  } catch (error) {
+    console.error('Error resetting user statuses:', error);
+  }
+
+  // Then start the server after database is connected
+  let server;
+
+  // Check if we can use HTTPS
+  try {
+    // Only try to read SSL files if they exist
+    const sslOptions = {
+      key: fs.readFileSync('./certs/server-key.pem'),
+      cert: fs.readFileSync('./certs/server.pem'),
+      ca: fs.readFileSync('./certs/ca.pem')
+    };
+
+    // Create HTTPS server
+    server = https.createServer(sslOptions, app);
+    console.log('Using HTTPS server');
+  } catch (error) {
+    // If SSL certificates not found, use HTTP instead
+    server = http.createServer(app);
+    console.log('SSL certificates not found, using HTTP server instead');
+  }
+
+  // Initialize Socket.IO with CORS settings
+  const io = socketIO(server, {
+    cors: {
+      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      methods: ["GET", "POST"],
+      credentials: true
+    }
+  });
+
+  // Set up Socket.IO for game events
+  setupGameSocket(io);
+
+  // Start the server
+  server.listen(PORT, () => {
+    const protocol = server instanceof https.Server ? 'https' : 'http';
+    logger.info(`Server running on ${protocol}://localhost:${PORT}`);
+    console.log(`Server running on ${protocol}://localhost:${PORT}`);
+  });
+});
 
 // Handle database connection events
 mongoose.connection.on('connected', () => {
@@ -78,17 +111,9 @@ mongoose.connection.on('disconnected', () => {
   console.log('MongoDB disconnected');
 });
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-httpsServer.listen(PORT, () => {
-  logger.info(`HTTPS server running on https://localhost:${PORT}`);
-  console.log(`HTTPS server running on https://localhost:${PORT}`);
-});
-
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error(`Unhandled Rejection: ${err}`);
-  httpsServer.close(() => process.exit(1));
+  console.error('Unhandled Rejection:', err);
+  process.exit(1);
 });
-
-console.log(`Server running on port ${PORT}`);

@@ -28,6 +28,16 @@ const useChess = (gameId) => {
   const [showPromotion, setShowPromotion] = useState(false);
   const [pendingPromotion, setPendingPromotion] = useState(null);
   
+  // Matchmaking state
+  const [isFindingMatch, setIsFindingMatch] = useState(false);
+
+  const handleFindMatch = () => {
+    if (isFindingMatch) return;
+    
+    setIsFindingMatch(true);
+    socket.emit('game:findMatch');
+  };
+  
   // Initialize game when component mounts
   useEffect(() => {
     if (!gameId) return;
@@ -204,7 +214,10 @@ const useChess = (gameId) => {
     // New promotion-related values
     showPromotion,
     completePromotion,
-    cancelPromotion
+    cancelPromotion,
+    // Matchmaking-related values
+    isFindingMatch,
+    handleFindMatch
   };
 };
 
