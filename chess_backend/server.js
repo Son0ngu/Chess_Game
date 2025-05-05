@@ -14,6 +14,12 @@ const logger = require('./src/utils/logger');
 const fs = require('fs');
 const https = require('https');
 
+// Initialize Express app
+const app = express();
+
+// Disable 'x-powered-by' header for security
+app.disable('x-powered-by');
+
 // SSL options
 const sslOptions = {
   key: fs.readFileSync('./certs/server-key.pem'),
@@ -21,14 +27,15 @@ const sslOptions = {
   ca: fs.readFileSync('./certs/ca.pem')
 };
 
-// Disable 'x-powered-by' header for security
-app.disable('x-powered-by');
+
 
 // Set security headers
-res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';");
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';");
+  next();
+});
 
-// Initialize Express app
-const app = express();
+
 
 // Use HTTPS server for everything
 const httpsServer = https.createServer(sslOptions, app);
