@@ -10,11 +10,10 @@ const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../middleware/userValidator');
 const { validationResult } = require('express-validator');
 
-// Helper middleware to handle validation errors
 const handleValidation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    logger.error(err); // Winston log
+    logger.error("Validation errors:", errors.array()); // Fix: removed undefined err
     return res.status(400).json({ errors: errors.array() });
   }
   next();
@@ -32,10 +31,10 @@ router.post('/register', registerValidation, handleValidation, async (req, res) 
     
     if (existingUser) {
       if (existingUser.email === email) {
-        logger.error(err); // Winston log
+        logger.error("Email already in use"); // Fix: removed undefined err
         return res.status(400).json({ error: 'Email already in use' });
       } else {
-        logger.error(err); // Winston log
+        logger.error("Username already taken"); // Fix: removed undefined err
         return res.status(400).json({ error: 'Username already taken' });
       }
     }
@@ -204,7 +203,7 @@ router.post('/recover', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      logger.error(err); // Winston log
+      logger.error(`No user found with email: ${email}`); // Fixed undefined err
       return res.status(404).json({ error: "No user with that email" });
     }
 
@@ -241,7 +240,7 @@ router.post('/recover', async (req, res) => {
     res.json({ message: "Recovery email sent! Check your inbox." });
   } catch (err) {
     console.error("Password recovery error:", err);
-    logger.error(err); // Winston log
+    logger.error(`Password recovery error: ${err.message}`); // Fixed undefined err
     res.status(500).json({ error: "Password recovery failed" });
   }
 });
@@ -261,7 +260,7 @@ router.post('/reset-password/:token', async (req, res) => {
 
     if (!user) {
       console.log("No user found with matching token or token expired.");
-      logger.error(err); // Winston log
+      logger.error("Invalid or expired reset token"); // Fixed undefined err
       return res.status(400).json({ error: "Invalid or expired token" });
     }
 
@@ -277,7 +276,7 @@ router.post('/reset-password/:token', async (req, res) => {
     res.json({ message: "Password has been reset successfully!" });
   } catch (err) {
     console.error("Reset password error:", err);
-    logger.error(err); // Winston log
+    logger.error(`Reset password error: ${err.message}`); // Fixed undefined err
     res.status(500).json({ error: "Server error" });
   }
 });
