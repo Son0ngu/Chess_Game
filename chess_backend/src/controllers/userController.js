@@ -3,7 +3,6 @@ const Game = require('../models/Game');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const logger = require('../utils/logger');
 
 // Register new user
 const registerUser = async (req, res) => {
@@ -16,7 +15,6 @@ const registerUser = async (req, res) => {
     });
     
     if (existingUser) {
-      logger.error(err); // Winston log
       return res.status(400).json({ 
         error: existingUser.username === username 
           ? 'Username already taken' 
@@ -33,10 +31,10 @@ const registerUser = async (req, res) => {
     });
 
     await user.save();
+
     res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error(err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Registration failed' });
   }
 };
@@ -79,7 +77,6 @@ const loginUser = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Login failed' });
   }
 };
@@ -96,7 +93,6 @@ const logoutUser = async (req, res) => {
     res.json({ message: 'Logout successful' });
   } catch (err) {
     console.error(err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Logout failed' });
   }
 };
@@ -110,33 +106,31 @@ const getUserProfile = async (req, res) => {
     res.json(user);
   } catch (err) {
     console.error(err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Could not get user' });
   }
 };
 
-// Get player rankings
-const getPlayerRankings = async (req, res) => {
+// Rename getPlayerRankings to getPlayerStats and remove ranking
+const getPlayerStats = async (req, res) => {
   try {
     // Get all users with their stats
-    const players = await User.find({}, 'username gamesPlayed gamesWon')
-      .sort({ gamesWon: -1 });
+    const players = await User.find({}, 'username gamesPlayed gamesWon gamesLost gamesDrawn');
     
     // Calculate additional stats
-    const playersWithStats = players.map((player, index) => ({
-      rank: index + 1,
+    const playersWithStats = players.map(player => ({
       username: player.username,
       gamesPlayed: player.gamesPlayed || 0,
       gamesWon: player.gamesWon || 0,
+      gamesLost: player.gamesLost || 0,
+      gamesDrawn: player.gamesDrawn || 0,
       winRate: player.gamesPlayed ? 
         Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
     }));
     
     res.json(playersWithStats);
   } catch (err) {
-    console.error('Error retrieving player rankings:', err);
-    logger.error(err); // Winston log
-    res.status(500).json({ error: 'Failed to retrieve rankings' });
+    console.error('Error retrieving player statistics:', err);
+    res.status(500).json({ error: 'Failed to retrieve player statistics' });
   }
 };
 
@@ -151,36 +145,35 @@ const getActiveUsers = async (req, res) => {
     res.json(activeUsers);
   } catch (err) {
     console.error('Error retrieving active users:', err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Failed to retrieve active users' });
   }
 };
 
-// Get top players for leaderboard
-const getLeaderboard = async (req, res) => {
+// Replace getLeaderboard with getTopPlayers and remove ranking
+const getTopPlayers = async (req, res) => {
   try {
-    // Get top 10 players with most games won
+    // Get top 10 players by games played
     const topPlayers = await User.find(
-      { gamesPlayed: { $gt: 5 } }, // Only include players with more than 5 games
-      'username gamesPlayed gamesWon'
+      { gamesPlayed: { $gt: 0 } }, 
+      'username gamesPlayed gamesWon gamesLost gamesDrawn'
     )
-    .sort({ gamesWon: -1, gamesPlayed: -1 })
+    .sort({ gamesPlayed: -1 })
     .limit(10);
     
-    const leaderboard = topPlayers.map((player, index) => ({
-      rank: index + 1,
+    const playerStats = topPlayers.map(player => ({
       username: player.username,
       gamesPlayed: player.gamesPlayed || 0,
       gamesWon: player.gamesWon || 0,
+      gamesLost: player.gamesLost || 0,
+      gamesDrawn: player.gamesDrawn || 0,
       winRate: player.gamesPlayed ? 
         Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
     }));
     
-    res.json(leaderboard);
+    res.json(playerStats);
   } catch (err) {
-    console.error('Error retrieving leaderboard:', err);
-    logger.error(err); // Winston log
-    res.status(500).json({ error: 'Failed to retrieve leaderboard' });
+    console.error('Error retrieving top players:', err);
+    res.status(500).json({ error: 'Failed to retrieve top players' });
   }
 };
 
@@ -190,13 +183,11 @@ const forgotPassword = async (req, res) => {
     const { email } = req.body;
     
     if (!email) {
-      logger.error(err); // Winston log
       return res.status(400).json({ error: 'Email is required' });
     }
     
     const user = await User.findOne({ email });
     if (!user) {
-      logger.error(err); // Winston log
       return res.status(404).json({ error: 'No account found with that email' });
     }
     
@@ -216,7 +207,6 @@ const forgotPassword = async (req, res) => {
     });
   } catch (err) {
     console.error('Error generating reset token:', err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Failed to process request' });
   }
 };
@@ -227,7 +217,6 @@ const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
     
     if (!token || !newPassword) {
-      logger.error(err); // Winston log
       return res.status(400).json({ error: 'Token and new password are required' });
     }
     
@@ -250,7 +239,6 @@ const resetPassword = async (req, res) => {
     res.json({ message: 'Password reset successful' });
   } catch (err) {
     console.error('Error resetting password:', err);
-    logger.error(err); // Winston log
     res.status(500).json({ error: 'Failed to reset password' });
   }
 };
@@ -261,9 +249,9 @@ module.exports = {
   loginUser,
   logoutUser,
   getUserProfile,
-  getPlayerRankings,
+  getPlayerStats,  // Instead of getPlayerRankings
   getActiveUsers,
-  getLeaderboard,
+  getTopPlayers,   // Instead of getLeaderboard
   forgotPassword,
   resetPassword
 };

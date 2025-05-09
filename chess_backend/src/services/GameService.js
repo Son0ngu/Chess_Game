@@ -70,7 +70,7 @@ class GameService {
       // Create chess instance
       const chess = new Chess();
       
-      // Create new game document
+      // Create new game document without isRanked
       const game = new Game({
         players: [
           {
@@ -89,7 +89,6 @@ class GameService {
         fen: chess.fen(),
         pgn: chess.pgn(),
         timeControl: gameOptions.timeControl || '10min',
-        isRanked: !!gameOptions.isRanked,
         status: 'active',
         startTime: new Date()
       });
@@ -164,8 +163,7 @@ class GameService {
           
           // Create a new game for these players
           const gameOptions = {
-            timeControl: player1.timeControl,
-            isRanked: false
+            timeControl: player1.timeControl
           };
           
           // Return the player IDs for game creation
@@ -206,21 +204,23 @@ class GameService {
         chess.load(gameData.fen);
       }
       
-      // Chuyển đổi từ cấu trúc Game model sang cấu trúc in-memory
+      // Convert from Game model to in-memory structure
       const game = {
         id: gameId,
         chess,
         players: gameData.players.map(p => ({
           id: p.user.toString(),
           username: p.username,
-          color: p.color
+          color: p.color,
+          timeRemaining: p.timeRemaining
         })),
         lastActivity: Date.now(),
         options: {
-          timeControl: gameData.timeControl,
-          isRanked: false
+          timeControl: gameData.timeControl
         },
-        status: gameData.status
+        status: gameData.status,
+        result: gameData.result,
+        resultReason: gameData.resultReason
       };
       
       this.activeGames.set(gameId, game);
@@ -669,8 +669,7 @@ class GameService {
       })),
       lastActivity: Date.now(),
       options: {
-        timeControl: gameModel.timeControl,
-        isRanked: false
+        timeControl: gameModel.timeControl
       },
       status: gameModel.status
     };
@@ -689,8 +688,7 @@ class GameService {
       fen: serviceGame.chess.fen(),
       pgn: serviceGame.chess.pgn(),
       status: serviceGame.status,
-      timeControl: serviceGame.options.timeControl,
-      isRanked: false
+      timeControl: serviceGame.options.timeControl
     };
   }
 
@@ -700,9 +698,9 @@ class GameService {
    * @param {Object} options - Tùy chọn cho trận đấu
    * @returns {Object} - Kết quả của quá trình tìm đối thủ
    */
-  async matchUsers(userId) {
+  async matchUsers(userId, options = {}) {
     try {
-      const timeControl = '10min';
+      const timeControl = options.timeControl || '10min';
       logger.debug(`[MATCHMAKING] Starting matchmaking for user ${userId}`);
 
       // Find user
@@ -740,13 +738,13 @@ class GameService {
           throw new Error('Opponent not found in database');
         }
         
-        // Create game with explicit error handling
+        // Create game without isRanked option
         let gameId;
         try {
           gameId = await this.createGame(
             userId,
             opponent.userId,
-            { timeControl, isRanked: false }
+            { timeControl }
           );
           
           logger.debug(`[MATCHMAKING] Game created with ID: ${gameId}`);
@@ -1106,17 +1104,16 @@ class GameService {
   /**
    * Lấy bảng xếp hạng người chơi
    */
-  async getPlayerRankings(limit = 50) {
+  async getPlayerStats(limit = 50) {
     try {
       // Lấy danh sách người chơi đã hoàn thành ít nhất 1 game
       const players = await User.find(
         { gamesPlayed: { $gt: 0 } },
         'username gamesPlayed gamesWon gamesLost gamesDrawn'
-      ).limit(limit).sort({ gamesWon: -1, gamesPlayed: 1 });
+      ).limit(limit);
       
       // Tính toán tỷ lệ thắng và xếp hạng
-      return players.map((player, index) => ({
-        rank: index + 1,
+      return players.map(player => ({
         id: player._id,
         username: player.username,
         gamesPlayed: player.gamesPlayed || 0,
@@ -1127,7 +1124,7 @@ class GameService {
           Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
       }));
     } catch (error) {
-      logger.error(`Error retrieving player rankings: ${error.message}`);
+      logger.error(`Error retrieving player statistics: ${error.message}`);
       throw error;
     }
   }
