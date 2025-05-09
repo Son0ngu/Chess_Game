@@ -3,9 +3,12 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import DOMPurify from "dompurify";
+import ReCAPTCHA from "react-google-recaptcha";
 import "../styles/Signup.css";
 
+// Sử dụng biến môi trường cho site key hoặc fallback về giá trị cứng
 const API_URL = "https://localhost:5000";
+const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -18,6 +21,7 @@ const SignUp = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [serverMessage, setServerMessage] = useState({ type: "", text: "" });
+  const [captchaToken, setCaptchaToken] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,6 +30,14 @@ const SignUp = () => {
     // Clear error when user starts typing in a field
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
+    }
+  };
+
+  const handleCaptchaChange = (token) => {
+    setCaptchaToken(token);
+    // Clear captcha error if it exists
+    if (errors.captcha) {
+      setErrors({ ...errors, captcha: "" });
     }
   };
 
@@ -49,16 +61,21 @@ const SignUp = () => {
       newErrors.email = "Please enter a valid email";
     }
 
-    // Password: required, min 6 chars
+    // Password: required, min 8 chars
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
 
     // Confirm password
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    // CAPTCHA required for all registrations
+    if (!captchaToken) {
+      newErrors.captcha = "Please complete the CAPTCHA verification";
     }
 
     setErrors(newErrors);
@@ -68,23 +85,23 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const cleanUsername = DOMPurify.sanitize(formData.username.trim());
-    const cleanEmail = DOMPurify.sanitize(formData.email.trim());
-
-    // Always trim username and email before sending
-    const payload = {
-      username: cleanUsername,
-      email: cleanEmail,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword
-    };
-
-    if (!validateForm(payload)) return;
+    if (!validateForm()) return;
 
     setIsLoading(true);
     setServerMessage({ type: "", text: "" });
 
     try {
+      const cleanUsername = DOMPurify.sanitize(formData.username.trim());
+      const cleanEmail = DOMPurify.sanitize(formData.email.trim());
+
+      // Always include captchaToken for registration
+      const payload = {
+        username: cleanUsername,
+        email: cleanEmail,
+        password: formData.password,
+        captchaToken: captchaToken
+      };
+
       const response = await axios.post(`${API_URL}/auth/register`, payload);
 
       if (response.data) {
@@ -95,10 +112,17 @@ const SignUp = () => {
 
         setTimeout(() => {
           navigate("/signin");
-        }, 2000);
+        }, 1500);
       }
     } catch (error) {
       console.error("Register error:", error);
+
+      // Reset captcha if server rejects it
+      if (error.response?.data?.error?.includes("CAPTCHA")) {
+        window.grecaptcha?.reset();
+        setCaptchaToken(null);
+      }
+
       const errorMessage = error.response?.data?.error || "Error creating account. Please try again.";
       setServerMessage({
         type: "error",
@@ -119,7 +143,7 @@ const SignUp = () => {
 
         {serverMessage.text && (
           <div
-            className={`auth-error`}
+            className={`auth-error ${serverMessage.type === "success" ? "auth-success" : ""}`}
             role="alert"
             aria-live="assertive"
           >
@@ -134,7 +158,7 @@ const SignUp = () => {
               type="text"
               id="username"
               name="username"
-              className="form-control"
+              className={`form-control ${errors.username ? "input-error" : ""}`}
               value={formData.username}
               onChange={handleChange}
               disabled={isLoading}
@@ -155,7 +179,7 @@ const SignUp = () => {
               type="email"
               id="email"
               name="email"
-              className="form-control"
+              className={`form-control ${errors.email ? "input-error" : ""}`}
               value={formData.email}
               onChange={handleChange}
               disabled={isLoading}
@@ -176,7 +200,7 @@ const SignUp = () => {
               type="password"
               id="password"
               name="password"
-              className="form-control"
+              className={`form-control ${errors.password ? "input-error" : ""}`}
               value={formData.password}
               onChange={handleChange}
               disabled={isLoading}
@@ -197,7 +221,7 @@ const SignUp = () => {
               type="password"
               id="confirmPassword"
               name="confirmPassword"
-              className="form-control"
+              className={`form-control ${errors.confirmPassword ? "input-error" : ""}`}
               value={formData.confirmPassword}
               onChange={handleChange}
               disabled={isLoading}
@@ -212,10 +236,22 @@ const SignUp = () => {
             )}
           </div>
 
+          <div className="form-group captcha-container">
+            <ReCAPTCHA
+              sitekey={RECAPTCHA_SITE_KEY}
+              onChange={handleCaptchaChange}
+            />
+            {errors.captcha && (
+              <span className="form-error" id="captcha-error">
+                {errors.captcha}
+              </span>
+            )}
+          </div>
+
           <button
             type="submit"
             className="signup-button"
-            disabled={isLoading}
+            disabled={isLoading || !captchaToken}
           >
             {isLoading ? "Creating Account..." : "Sign Up"}
           </button>

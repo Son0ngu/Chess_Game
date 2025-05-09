@@ -60,6 +60,18 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0
+    },
+    lastFailedLogin: {
+      type: Date,
+      default: null
+    },
+    requireCaptcha: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );
