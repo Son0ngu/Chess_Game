@@ -57,23 +57,22 @@ const sslOptions = {
   ca: fs.readFileSync('./certs/ca.pem')
 };
 
-
-
 // Set security headers
 app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';");
   next();
 });
 
-
-
 // Use HTTPS server for everything
 const httpsServer = https.createServer(sslOptions, app);
 
-// Initialize Socket.IO with CORS settings
+// Update Socket.IO CORS settings to allow Firebase origin
 const io = socketIO(httpsServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "https://localhost:3000",
+    origin: [
+      process.env.CLIENT_URL || "https://localhost:3000", 
+      "https://chess-79bd8.web.app"
+    ],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -83,8 +82,22 @@ const io = socketIO(httpsServer, {
 connectDB();
 
 // Middleware
+
+// Update CORS middleware to allow Firebase origin
 app.use(cors({
-  origin: process.env.CLIENT_URL || "https://localhost:3000",
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    const allowedOrigins = [
+      process.env.CLIENT_URL || "https://localhost:3000",
+      "https://chess-79bd8.web.app"
+    ];
+    
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
