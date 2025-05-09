@@ -52,9 +52,9 @@ app.use(globalLimiter);
 
 // SSL options
 const sslOptions = {
-  key: fs.readFileSync('./etc/secrets/server-key.pem'),
-  cert: fs.readFileSync('./etc/secrets/server.pem'),
-  ca: fs.readFileSync('./etc/secrets/ca.pem')
+  key: fs.readFileSync('/etc/secrets/server-key.pem'),
+  cert: fs.readFileSync('./certs/server.pem'),
+  ca: fs.readFileSync('./certs/ca.pem')
 };
 
 
