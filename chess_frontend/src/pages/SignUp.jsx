@@ -5,10 +5,10 @@ import axios from "axios";
 import DOMPurify from "dompurify";
 import ReCAPTCHA from "react-google-recaptcha";
 import "../styles/Signup.css";
-import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages";
+import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages.js";
 
 // Sử dụng biến môi trường cho site key hoặc fallback về giá trị cứng
-const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-sec.onrender.com";
 const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY
 
 const SignUp = () => {

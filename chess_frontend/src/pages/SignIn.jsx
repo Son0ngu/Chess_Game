@@ -6,9 +6,9 @@ import DOMPurify from "dompurify";
 import ReCAPTCHA from "react-google-recaptcha";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Signin.css";
-import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages";
+import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages.js";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-sec.onrender.com";
 // Use environment variable or fallback to test key
 const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"; // Test key
 

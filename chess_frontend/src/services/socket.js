@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import { getToken } from '../utils/storage';
 
 // Base URL for socket connection - use environment variable with fallback
-const SOCKET_URL = process.env.REACT_APP_API_URL || 'https://chess-game-2-2fv5.onrender.com';
+const SOCKET_URL = process.env.REACT_APP_API_URL || 'https://chess-sec.onrender.com';
 
 // Create socket instance with authentication
 export const socket = io(SOCKET_URL, {

@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "../styles/Signin.css"; // reuse luôn Signin.css
-import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages";
+import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages.js";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-sec.onrender.com"; // URL API của bạn
 
 const ResetPassword = () => {
   const { token } = useParams(); // lấy token từ URL
