@@ -54,7 +54,8 @@ const SignUp = () => {
     }
 
     // Email: required, valid format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+     // Using safer regex that prevents catastrophic backtracking
+    const emailRegex = /^[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,255}\.[a-zA-Z]{2,}$/;
     if (!emailTrimmed) {
       newErrors.email = "Email is required";
     } else if (!emailRegex.test(emailTrimmed)) {
