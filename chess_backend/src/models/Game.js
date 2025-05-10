@@ -81,10 +81,6 @@ const gameSchema = new mongoose.Schema({
     type: String,
     default: '10min',
   },
-  isRanked: {
-    type: Boolean,
-    default: false,
-  },
   drawOffers: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: 'User',
@@ -146,7 +142,6 @@ gameSchema.methods.getPublicGame = function() {
     result: this.result,
     resultReason: this.resultReason,
     timeControl: this.timeControl,
-    isRanked: this.isRanked,
     moves: this.moves,
     fen: this.fen,
     lastMove: this.lastMove

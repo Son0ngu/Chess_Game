@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "../styles/Signin.css"; // reuse luôn Signin.css
 
-const API_URL = "https://localhost:5000"; // Backend URL
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
 
 const ResetPassword = () => {
   const { token } = useParams(); // lấy token từ URL

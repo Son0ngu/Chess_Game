@@ -110,27 +110,27 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-// Get player rankings
-const getPlayerRankings = async (req, res) => {
+// Rename getPlayerRankings to getPlayerStats and remove ranking
+const getPlayerStats = async (req, res) => {
   try {
     // Get all users with their stats
-    const players = await User.find({}, 'username gamesPlayed gamesWon')
-      .sort({ gamesWon: -1 });
+    const players = await User.find({}, 'username gamesPlayed gamesWon gamesLost gamesDrawn');
     
     // Calculate additional stats
-    const playersWithStats = players.map((player, index) => ({
-      rank: index + 1,
+    const playersWithStats = players.map(player => ({
       username: player.username,
       gamesPlayed: player.gamesPlayed || 0,
       gamesWon: player.gamesWon || 0,
+      gamesLost: player.gamesLost || 0,
+      gamesDrawn: player.gamesDrawn || 0,
       winRate: player.gamesPlayed ? 
         Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
     }));
     
     res.json(playersWithStats);
   } catch (err) {
-    console.error('Error retrieving player rankings:', err);
-    res.status(500).json({ error: 'Failed to retrieve rankings' });
+    console.error('Error retrieving player statistics:', err);
+    res.status(500).json({ error: 'Failed to retrieve player statistics' });
   }
 };
 
@@ -149,30 +149,31 @@ const getActiveUsers = async (req, res) => {
   }
 };
 
-// Get top players for leaderboard
-const getLeaderboard = async (req, res) => {
+// Replace getLeaderboard with getTopPlayers and remove ranking
+const getTopPlayers = async (req, res) => {
   try {
-    // Get top 10 players with most games won
+    // Get top 10 players by games played
     const topPlayers = await User.find(
-      { gamesPlayed: { $gt: 5 } }, // Only include players with more than 5 games
-      'username gamesPlayed gamesWon'
+      { gamesPlayed: { $gt: 0 } }, 
+      'username gamesPlayed gamesWon gamesLost gamesDrawn'
     )
-    .sort({ gamesWon: -1, gamesPlayed: -1 })
+    .sort({ gamesPlayed: -1 })
     .limit(10);
     
-    const leaderboard = topPlayers.map((player, index) => ({
-      rank: index + 1,
+    const playerStats = topPlayers.map(player => ({
       username: player.username,
       gamesPlayed: player.gamesPlayed || 0,
       gamesWon: player.gamesWon || 0,
+      gamesLost: player.gamesLost || 0,
+      gamesDrawn: player.gamesDrawn || 0,
       winRate: player.gamesPlayed ? 
         Math.round((player.gamesWon / player.gamesPlayed) * 100) : 0
     }));
     
-    res.json(leaderboard);
+    res.json(playerStats);
   } catch (err) {
-    console.error('Error retrieving leaderboard:', err);
-    res.status(500).json({ error: 'Failed to retrieve leaderboard' });
+    console.error('Error retrieving top players:', err);
+    res.status(500).json({ error: 'Failed to retrieve top players' });
   }
 };
 
@@ -248,9 +249,9 @@ module.exports = {
   loginUser,
   logoutUser,
   getUserProfile,
-  getPlayerRankings,
+  getPlayerStats,  // Instead of getPlayerRankings
   getActiveUsers,
-  getLeaderboard,
+  getTopPlayers,   // Instead of getLeaderboard
   forgotPassword,
   resetPassword
 };

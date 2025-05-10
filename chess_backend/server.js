@@ -2,118 +2,135 @@
 
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const socketIO = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/auth');
 const gamesRoutes = require('./src/routes/game');
 const errorHandler = require('./src/middleware/errorHandler');
 const setupGameSocket = require('./src/socket/gameSocket');
 const logger = require('./src/utils/logger');
-const fs = require('fs');
-const https = require('https');
-const http = require('http');
-const User = require('./src/models/user'); // Assuming User model is defined in this path
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
-  credentials: true
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Limit request body size to prevent large payload DoS
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// API Routes
-app.use('/auth', authRoutes);
+// Global rate limiter - applies to all routes
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // limit each IP to 200 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  handler: (req, res, next, options) => {
+    logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
+    res.status(options.statusCode).send(options.message);
+  }
+});
+
+// Stricter rate limiter for authentication routes
+const authLimiter = rateLimit({
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 20, // limit each IP to 20 login attempts per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many login attempts, please try again after 30 minutes',
+});
+
+// Disable 'x-powered-by' header for security
+app.disable('x-powered-by');
+
+// Apply global rate limiter to all requests
+app.use(globalLimiter);
+
+// Set security headers
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; object-src 'none';"
+  );
+  next();
+});
+
+// CORS setup
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+const ALLOWED_ORIGINS = [CLIENT_URL, process.env.FIREBASE_HOSTING_URL].filter(Boolean);
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) callback(null, true);
+      else callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
+
+// Connect to MongoDB
+connectDB();
+
+// API routes
+app.use('/auth', authLimiter, authRoutes);
 app.use('/games', gamesRoutes);
 
 // Base route
-app.get('/', (req, res) => {
-  res.send('Chess Game API Server');
-});
+app.get('/', (req, res) => res.send('Chess Game API Server'));
 
 // Error handling middleware
 app.use(errorHandler);
 
-// Connect to MongoDB first
-connectDB().then(async () => {
-  try {
-    // Reset trạng thái người dùng khi server khởi động
-    const result = await User.updateMany(
-      { status: { $in: ['online', 'looking_for_match'] } },
-      { status: 'offline' }
-    );
-    
-    console.log(`Reset ${result.modifiedCount} users to offline status`);
-  } catch (error) {
-    console.error('Error resetting user statuses:', error);
-  }
+// Setup HTTP or HTTPS server based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+let server;
+if (isProduction) {
+  // Render provides SSL/TLS termination
+  server = http.createServer(app);
+} else {
+  const sslOptions = {
+    key: fs.readFileSync('/etc/secrets/server-key.pem'),
+    cert: fs.readFileSync('./certs/server.pem'),
+    ca: fs.readFileSync('./certs/ca.pem'),
+  };
+  server = https.createServer(sslOptions, app);
+}
 
-  // Then start the server after database is connected
-  let server;
-
-  // Check if we can use HTTPS
-  try {
-    // Only try to read SSL files if they exist
-    const sslOptions = {
-      key: fs.readFileSync('./certs/server-key.pem'),
-      cert: fs.readFileSync('./certs/server.pem'),
-      ca: fs.readFileSync('./certs/ca.pem')
-    };
-
-    // Create HTTPS server
-    server = https.createServer(sslOptions, app);
-    console.log('Using HTTPS server');
-  } catch (error) {
-    // If SSL certificates not found, use HTTP instead
-    server = http.createServer(app);
-    console.log('SSL certificates not found, using HTTP server instead');
-  }
-
-  // Initialize Socket.IO with CORS settings
-  const io = socketIO(server, {
-    cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
-      methods: ["GET", "POST"],
-      credentials: true
-    }
-  });
-
-  // Set up Socket.IO for game events
-  setupGameSocket(io);
-
-  // Start the server
-  server.listen(PORT, () => {
-    const protocol = server instanceof https.Server ? 'https' : 'http';
-    logger.info(`Server running on ${protocol}://localhost:${PORT}`);
-    console.log(`Server running on ${protocol}://localhost:${PORT}`);
-  });
+// Initialize Socket.IO
+const io = socketIO(server, {
+  cors: {
+    origin: ALLOWED_ORIGINS,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
+setupGameSocket(io);
 
-// Handle database connection events
+// MongoDB event handlers
 mongoose.connection.on('connected', () => {
   logger.info('Connected to MongoDB');
-  console.log('MongoDB is connected');
 });
-
 mongoose.connection.on('error', (err) => {
   logger.error(`MongoDB connection error: ${err}`);
-  console.error('MongoDB connection error:', err);
   process.exit(1);
 });
+mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected'));
 
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+// Start the server
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, '0.0.0.0', () => {
+  const protocol = isProduction ? 'http' : 'https';
+  logger.info(`Server running on ${protocol}://0.0.0.0:${PORT}`);
+  console.log(`Server running on ${protocol}://0.0.0.0:${PORT}`);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error(`Unhandled Rejection: ${err}`);
-  console.error('Unhandled Rejection:', err);
-  process.exit(1);
+  server.close(() => process.exit(1));
 });

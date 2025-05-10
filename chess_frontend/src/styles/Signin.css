@@ -266,3 +266,38 @@
   color: #fff;
   text-decoration: underline;
 }
+
+/* Add these styles at the end of the file */
+
+.auth-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.captcha-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.divider {
+  color: #999;
+  margin: 0 8px;
+}
+
+.input-error {
+  border-color: #f44336 !important;
+}
+
+/* Ensure the reCAPTCHA fits within the container */
+.captcha-container iframe {
+  max-width: 100%;
+}

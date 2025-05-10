@@ -9,117 +9,120 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../middleware/userValidator');
 const { validationResult } = require('express-validator');
+const validateCaptcha = require('../middleware/captchaValidator');
 
-// Helper middleware to handle validation errors
 const handleValidation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    logger.error("Validation errors:", errors.array()); // Fix: removed undefined err
     return res.status(400).json({ errors: errors.array() });
   }
   next();
 };
 
-// Register a new user
-router.post('/register', registerValidation, handleValidation, async (req, res) => {
+// Register a new user with CAPTCHA
+router.post('/register', registerValidation, handleValidation, validateCaptcha, async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-
-    // Check if user exists
+    const { username, email, password, captchaToken } = req.body;
+    
+    // Kiểm tra CAPTCHA cho đăng ký (luôn yêu cầu)
+    if (!captchaToken) {
+      return res.status(400).json({ error: 'CAPTCHA verification required' });
+    }
+    
+    // Kiểm tra xem người dùng đã tồn tại chưa
     const existingUser = await User.findOne({ 
       $or: [{ email }, { username }]
     });
     
     if (existingUser) {
       if (existingUser.email === email) {
+        logger.error("Email already in use"); // Fix: removed undefined err
         return res.status(400).json({ error: 'Email already in use' });
       } else {
+        logger.error("Username already taken"); // Fix: removed undefined err
         return res.status(400).json({ error: 'Username already taken' });
       }
     }
 
-    // Create user
+    // Tạo người dùng mới
     const user = new User({
       username,
       email,
       password
     });
-
+    
     await user.save();
-
+    
     res.status(201).json({ message: 'User registered successfully' });
+    
   } catch (err) {
     logger.error(`Registration error: ${err.message}`);
     res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-// Login user
-router.post('/login', loginValidation, handleValidation, async (req, res) => {
+// Login user with CAPTCHA
+router.post('/login', loginValidation, handleValidation, validateCaptcha, async (req, res) => {
   try {
     const { username, password } = req.body;
     logger.debug("Login attempt for:", username);
-    logger.debug("Request body:", req.body);
-    logger.debug("Password raw received:", JSON.stringify(password)); 
     
-    // Find user by username
-    const user = await User.findOne({ username })
+    // Tìm người dùng
+    const user = await User.findOne({ username });
     if (!user) {
       logger.debug(`User "${username}" not found in database`);
       return res.status(400).json({ error: 'Invalid login credentials' });
     }
-    logger.debug(`User found: ${user.username}, ID: ${user._id}`);
     
-    // Check if password field exists in user document
-    if (!user.password) {
-      logger.error("User has no password field:", user);
-      return res.status(500).json({ error: 'Account setup issue. Please contact support.' });
-    }
+    // So sánh mật khẩu
+    const isMatch = await user.comparePassword(password.trim());
     
-    try {
-      // Compare password
-      const isMatch = await user.comparePassword(password.trim());
-
-      logger.debug(`Password match: ${isMatch}`);
+    if (!isMatch) {
+      // Tăng số lần thất bại
+      user.failedLoginAttempts += 1;
+      user.lastFailedLogin = Date.now();
       
-      if (!isMatch) {
-        logger.debug("Password doesn't match");
-        return res.status(400).json({ error: 'Invalid login credentials' });
+      // Nếu đạt ngưỡng 5 lần, yêu cầu CAPTCHA
+      if (user.failedLoginAttempts >= 5) {
+        user.requireCaptcha = true;
+        logger.debug(`CAPTCHA required for user ${username} after ${user.failedLoginAttempts} failed attempts`);
       }
       
-      // Update last login time
-      user.lastActive = Date.now();
-      user.isOnline = true;
       await user.save();
+      logger.debug(`Failed login attempt ${user.failedLoginAttempts} for user ${username}`);
       
-      // Generate JWT
-      try {
-        const token = jwt.sign(
-          { id: user._id },
-          process.env.JWT_SECRET,
-          { expiresIn: '1d' }
-        );
-        logger.debug("JWT generated successfully");
-        
-        // Return success response
-        res.json({
-          token,
-          user: {
-            id: user._id,
-            username: user.username,
-            email: user.email
-          }
-        });
-      } catch (jwtError) {
-        logger.error("JWT signing error:", jwtError);
-        return res.status(500).json({ error: 'Authentication error' });
-      }
-    } catch (passwordError) {
-      logger.error("Password comparison error:", passwordError);
-      return res.status(500).json({ error: 'Authentication error' });
+      return res.status(400).json({ 
+        error: 'Invalid login credentials',
+        requireCaptcha: user.requireCaptcha
+      });
     }
+    
+    // Đăng nhập thành công - đặt lại bộ đếm
+    user.failedLoginAttempts = 0;
+    user.requireCaptcha = false;
+    user.lastActive = Date.now();
+    user.isOnline = true;
+    await user.save();
+    
+    // Tạo JWT và trả về response thành công
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      }
+    });
+    
   } catch (error) {
     logger.error("Login route error:", error);
-    logger.error(`Login error: ${error.message}`);
     res.status(500).json({ error: 'Login failed' });
   }
 });
@@ -201,6 +204,7 @@ router.post('/recover', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
+      logger.error(`No user found with email: ${email}`); // Fixed undefined err
       return res.status(404).json({ error: "No user with that email" });
     }
 
@@ -237,6 +241,7 @@ router.post('/recover', async (req, res) => {
     res.json({ message: "Recovery email sent! Check your inbox." });
   } catch (err) {
     console.error("Password recovery error:", err);
+    logger.error(`Password recovery error: ${err.message}`); // Fixed undefined err
     res.status(500).json({ error: "Password recovery failed" });
   }
 });
@@ -256,6 +261,7 @@ router.post('/reset-password/:token', async (req, res) => {
 
     if (!user) {
       console.log("No user found with matching token or token expired.");
+      logger.error("Invalid or expired reset token"); // Fixed undefined err
       return res.status(400).json({ error: "Invalid or expired token" });
     }
 
@@ -271,6 +277,7 @@ router.post('/reset-password/:token', async (req, res) => {
     res.json({ message: "Password has been reset successfully!" });
   } catch (err) {
     console.error("Reset password error:", err);
+    logger.error(`Reset password error: ${err.message}`); // Fixed undefined err
     res.status(500).json({ error: "Server error" });
   }
 });
