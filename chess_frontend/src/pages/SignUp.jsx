@@ -5,6 +5,7 @@ import axios from "axios";
 import DOMPurify from "dompurify";
 import ReCAPTCHA from "react-google-recaptcha";
 import "../styles/Signup.css";
+import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages";
 
 // Sử dụng biến môi trường cho site key hoặc fallback về giá trị cứng
 const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
@@ -48,35 +49,35 @@ const SignUp = () => {
 
     // Username: required, alphanumeric/underscore, 3-20 chars
     if (!usernameTrimmed) {
-      newErrors.username = "Username is required";
+      newErrors.username = AUTH_VALIDATION_MESSAGES.USERNAME.REQUIRED;;
     } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(usernameTrimmed)) {
-      newErrors.username = "Username must be 3-20 alphanumeric characters";
+      newErrors.username = AUTH_VALIDATION_MESSAGES.USERNAME.FORMAT;
     }
 
     // Email: required, valid format
      // Using safer regex that prevents catastrophic backtracking
     const emailRegex = /^[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,255}\.[a-zA-Z]{2,}$/;
     if (!emailTrimmed) {
-      newErrors.email = "Email is required";
+      newErrors.email = AUTH_VALIDATION_MESSAGES.EMAIL.REQUIRED;
     } else if (!emailRegex.test(emailTrimmed)) {
-      newErrors.email = "Please enter a valid email";
+      newErrors.email = AUTH_VALIDATION_MESSAGES.EMAIL.FORMAT;
     }
 
     // Password: required, min 8 chars
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = AUTH_VALIDATION_MESSAGES.PASSWORD.REQUIRED;
     } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+      newErrors.password = AUTH_VALIDATION_MESSAGES.PASSWORD.MIN_LENGTH;
     }
 
     // Confirm password
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      newErrors.confirmPassword = AUTH_VALIDATION_MESSAGES.PASSWORD.MISMATCH;
     }
 
     // CAPTCHA required for all registrations
     if (!captchaToken) {
-      newErrors.captcha = "Please complete the CAPTCHA verification";
+      newErrors.captcha = AUTH_VALIDATION_MESSAGES.CAPTCHA.REQUIRED;
     }
 
     setErrors(newErrors);

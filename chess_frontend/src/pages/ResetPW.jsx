@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "../styles/Signin.css"; // reuse luôn Signin.css
+import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages";
 
 const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
 
@@ -18,12 +19,12 @@ const ResetPassword = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors.password = AUTH_VALIDATION_MESSAGES.PASSWORD.REQUIRED;
+    } else if (password.length < 8) {
+      newErrors.password = AUTH_VALIDATION_MESSAGES.PASSWORD.MIN_LENGTH;
     }
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      newErrors.confirmPassword = AUTH_VALIDATION_MESSAGES.PASSWORD.MISMATCH;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

@@ -6,6 +6,7 @@ import DOMPurify from "dompurify";
 import ReCAPTCHA from "react-google-recaptcha";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Signin.css";
+import { AUTH_VALIDATION_MESSAGES } from "../constants/validationMessages";
 
 const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
 // Use environment variable or fallback to test key
@@ -47,17 +48,17 @@ const SignIn = () => {
 
     // Username validation
     if (!usernameTrimmed) {
-      newErrors.username = "Username is required";
+      newErrors.username = AUTH_VALIDATION_MESSAGES.USERNAME.REQUIRED;
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = AUTH_VALIDATION_MESSAGES.PASSWORD.REQUIRED;
     }
 
     // CAPTCHA validation
     if (requireCaptcha && !captchaToken) {
-      newErrors.captcha = "Please complete the CAPTCHA verification";
+      newErrors.captcha = AUTH_VALIDATION_MESSAGES.CAPTCHA.REQUIRED;
     }
 
     setErrors(newErrors);
