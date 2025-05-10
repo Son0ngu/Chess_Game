@@ -34,7 +34,6 @@ A secure, real-time web-based chess platform allowing users to play matches onli
       <ul>
         <li>React.js</li>
         <li>Socket.IO client</li>
-        <li>Tailwind CSS</li>
       </ul>
     </td>
     <td>
