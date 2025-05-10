@@ -4,7 +4,7 @@ import { getToken, setToken, removeToken, getUserId, setUserId, removeUserId } f
 import { connectSocket, disconnectSocket } from '../services/socket';
 
 // API base URL - fixed to match your backend routes
-const API_URL = "https://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
 
 // Create context
 const AuthContext = createContext(null);

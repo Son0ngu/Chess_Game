@@ -7,7 +7,7 @@ import ReCAPTCHA from "react-google-recaptcha";
 import "../styles/Signup.css";
 
 // Sử dụng biến môi trường cho site key hoặc fallback về giá trị cứng
-const API_URL = "https://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
 const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY
 
 const SignUp = () => {

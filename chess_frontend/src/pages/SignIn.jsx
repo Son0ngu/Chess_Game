@@ -7,7 +7,7 @@ import ReCAPTCHA from "react-google-recaptcha";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Signin.css";
 
-const API_URL = "https://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "https://chess-game-2-2fv5.onrender.com";
 // Use environment variable or fallback to test key
 const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"; // Test key
 
