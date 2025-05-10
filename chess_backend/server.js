@@ -134,3 +134,5 @@ process.on('unhandledRejection', (err) => {
   logger.error(`Unhandled Rejection: ${err}`);
   server.close(() => process.exit(1));
 });
+
+console.log(`Server running on port ${PORT}`);
