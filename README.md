@@ -69,7 +69,7 @@ A secure, real-time web-based chess platform allowing users to play matches onli
   - JWT authentication
   - Password authentication
   - CAPTCHA implementation
-
+  - Security testing
 - **Phan Viet Anh**
   - Frontend development
   - HTTPS implementation
@@ -81,7 +81,7 @@ A secure, real-time web-based chess platform allowing users to play matches onli
   - WebSocket connection
   - Password recovery
   - Output sanitization
-  - Security testing
+  
 
 
 ---
