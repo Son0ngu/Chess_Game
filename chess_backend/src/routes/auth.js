@@ -223,7 +223,7 @@ router.post('/recover', async (req, res) => {
     await user.save();
 
     // 2. Create reset URL
-    const resetUrl = `https://chess-79bd8.web.app//reset-password/${resetToken}`; 
+    const resetUrl = `https://chess-79bd8.web.app/reset-password/${resetToken}`; 
     // Nếu bạn deploy, đổi localhost:3000 thành yourfrontend.com
 
     // 3. Send email
