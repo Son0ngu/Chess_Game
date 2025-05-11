@@ -215,10 +215,7 @@ router.post('/recover', async (req, res) => {
     user.resetToken = resetToken;
     user.resetTokenExpiration = resetTokenExpiration;
 
-    console.log(resetTokenExpiration);
 
-    console.log(`Generated reset token: ${resetToken}`);
-    console.log(`Token expires at: ${new Date(resetTokenExpiration)}`);
 
     await user.save();
 
@@ -240,7 +237,7 @@ router.post('/recover', async (req, res) => {
 
     res.json({ message: "Recovery email sent! Check your inbox." });
   } catch (err) {
-    console.error("Password recovery error:", err);
+    console.error("Password recovery error:");
     logger.error(`Password recovery error: ${err.message}`); // Fixed undefined err
     res.status(500).json({ error: "Password recovery failed" });
   }
@@ -251,8 +248,6 @@ router.post('/reset-password/:token', async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
-    console.log("Received reset token:", token);
-    console.log("Received new password:", password);
 
     const user = await User.findOne({
       resetToken: token,
@@ -265,7 +260,6 @@ router.post('/reset-password/:token', async (req, res) => {
       return res.status(400).json({ error: "Invalid or expired token" });
     }
 
-    console.log("User found:", user.email);
 
 
     // Update mật khẩu
