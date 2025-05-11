@@ -131,6 +131,7 @@ server.listen(PORT, '0.0.0.0', () => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  logger.error(`Unhandled Rejection: ${err}`);
+  logger.error(`Unhandled Rejection: ${err.stack || err.message || err}`);
+
   server.close(() => process.exit(1));
 });

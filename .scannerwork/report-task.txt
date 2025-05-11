@@ -1,0 +1,6 @@
+projectKey=Chess_sec
+serverUrl=http://localhost:9000
+serverVersion=25.5.0.107428
+dashboardUrl=http://localhost:9000/dashboard?id=Chess_sec
+ceTaskId=ddfa0d57-33d8-479c-a419-81dd9604c267
+ceTaskUrl=http://localhost:9000/api/ce/task?id=ddfa0d57-33d8-479c-a419-81dd9604c267

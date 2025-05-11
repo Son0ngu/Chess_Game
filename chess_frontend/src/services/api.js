@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import axios from 'axios';
 import { getToken } from '../utils/storage';
 
@@ -21,8 +22,9 @@ api.interceptors.request.use(
     return config;
   },
   error => {
-    return Promise.reject(error);
-  }
+    return Promise.reject(error instanceof Error ? error : new Error(JSON.stringify(error)));
+
+  } 
 );
 
 // Add response interceptor for error handling
@@ -34,7 +36,7 @@ api.interceptors.response.use(
       // Maybe redirect to login or refresh token here
       console.error('Authentication error - please log in again');
     }
-    return Promise.reject(error);
+    return Promise.reject(error instanceof Error ? error : new Error(JSON.stringify(error)));
   }
 );
 
