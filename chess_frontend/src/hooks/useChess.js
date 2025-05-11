@@ -65,11 +65,27 @@ const useChess = (gameId) => {
       setPossibleMoves(data.legalMoves || {});
 
       if (data.gameOver) {
-        setGameStatus({
-          isGameOver: true,
-          result: data.result
-        });
+  // Create a copy of the result to modify
+  let result = {...data.result};
+  
+  // Check if winner is a color instead of user ID
+  if (result && result.type === "checkmate" && 
+      (result.winner === 'white' || result.winner === 'black')) {
+    
+    // Find the player with this color
+    if (data.players && Array.isArray(data.players)) {
+      const winningPlayer = data.players.find(p => p && p.color === result.winner);
+      if (winningPlayer) {
+        result.winner = winningPlayer.id;
       }
+    }
+  }
+  
+  setGameStatus({
+    isGameOver: true,
+    result: result
+  });
+}
     };
 
     // Listen for game updates
@@ -90,11 +106,27 @@ const useChess = (gameId) => {
       }
       
       if (data.gameOver) {
-        setGameStatus({
-          isGameOver: true,
-          result: data.result
-        });
+  // Create a copy of the result to modify
+  let result = {...data.result};
+  
+  // Check if winner is a color instead of user ID
+  if (result && result.type === "checkmate" && 
+      (result.winner === 'white' || result.winner === 'black')) {
+    
+    // Find the player with this color from data
+    if (data.players && Array.isArray(data.players)) {
+      const winningPlayer = data.players.find(p => p && p.color === result.winner);
+      if (winningPlayer) {
+        result.winner = winningPlayer.id;
       }
+    } 
+  }
+  
+  setGameStatus({
+    isGameOver: true,
+    result: result
+  });
+}
     });
     
     // Listen for game data when joining

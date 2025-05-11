@@ -173,8 +173,11 @@ const Play = () => {
             <div className="game-result">
               <h2>Game Over</h2>
               {gameResult?.type === "checkmate" && (
-                <p>Checkmate! {gameResult.winner === user.id ? "You won" : "You lost"}</p>
-              )}
+  <p>
+    Checkmate! {gameResult.winner === user.id ? "You won!" : 
+               opponent && gameResult.winner === opponent.id ? "You lost." : "Game over!"}
+  </p>
+)}
               {gameResult?.type === "draw" && (
                 <p>Game drawn by {gameResult.reason || "agreement"}</p>
               )}
